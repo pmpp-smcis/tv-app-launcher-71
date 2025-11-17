@@ -57,6 +57,10 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        "tv-focus": "hsl(var(--tv-focus))",
+      },
+      boxShadow: {
+        "tv-focus": "var(--tv-focus-glow)",
       },
       borderRadius: {
         lg: "var(--radius)",

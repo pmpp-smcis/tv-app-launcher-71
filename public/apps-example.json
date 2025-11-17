@@ -1,0 +1,40 @@
+{
+  "apps": [
+    {
+      "id": "app1",
+      "name": "YouTube TV",
+      "description": "Assista vídeos e música no seu Android TV",
+      "version": "2.0.1",
+      "icon": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/YouTube_full-color_icon_%282017%29.svg/240px-YouTube_full-color_icon_%282017%29.svg.png",
+      "apkUrl": "https://example.com/youtube-tv.apk",
+      "packageName": "com.google.android.youtube.tv"
+    },
+    {
+      "id": "app2",
+      "name": "Netflix",
+      "description": "Filmes e séries ilimitados",
+      "version": "8.5.2",
+      "icon": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/Netflix_2015_logo.svg/240px-Netflix_2015_logo.svg.png",
+      "apkUrl": "https://example.com/netflix.apk",
+      "packageName": "com.netflix.ninja"
+    },
+    {
+      "id": "app3",
+      "name": "Spotify",
+      "description": "Música e podcasts para todos",
+      "version": "1.2.3",
+      "icon": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Spotify_logo_without_text.svg/240px-Spotify_logo_without_text.svg.png",
+      "apkUrl": "https://example.com/spotify.apk",
+      "packageName": "com.spotify.tv.android"
+    },
+    {
+      "id": "app4",
+      "name": "VLC Player",
+      "description": "Reprodutor multimídia universal",
+      "version": "3.5.4",
+      "icon": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/38/VLC_icon.png/240px-VLC_icon.png",
+      "apkUrl": "https://example.com/vlc.apk",
+      "packageName": "org.videolan.vlc"
+    }
+  ]
+}
