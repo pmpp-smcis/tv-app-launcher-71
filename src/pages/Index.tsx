@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
 // Configure your JSON URL here
-const APPS_JSON_URL = "https://raw.githubusercontent.com/your-username/your-repo/main/apps.json";
+const APPS_JSON_URL = "https://gitlab.com/vlb1/apps/-/raw/main/apps.json";
 
 const Index = () => {
   const [apps, setApps] = useState<AppItem[]>([]);
