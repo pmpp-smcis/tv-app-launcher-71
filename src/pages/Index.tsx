@@ -4,7 +4,7 @@ import { AppItem } from "@/types/app";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { Filesystem, Directory } from '@capacitor/filesystem';
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, CapacitorHttp } from '@capacitor/core';
 import { FileOpener } from '@capacitor-community/file-opener';
 
 // Configure your JSON URL here
@@ -92,46 +92,26 @@ const Index = () => {
         description: `Iniciando download de ${app.name}`,
       });
 
-      // Usar XMLHttpRequest para melhor compatibilidade com Android
-      console.log('🔵 Iniciando download via XMLHttpRequest...');
+      // Usar CapacitorHttp que vem embutido no core - contorna restrições de CORS
+      console.log('🔵 Iniciando download via CapacitorHttp...');
       
-      const arrayBuffer = await new Promise<ArrayBuffer>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open('GET', app.apkUrl, true);
-        xhr.responseType = 'arraybuffer';
-        
-        xhr.onload = () => {
-          if (xhr.status === 200) {
-            console.log('🔵 Download concluído, tamanho:', xhr.response.byteLength);
-            resolve(xhr.response);
-          } else {
-            reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
-          }
-        };
-        
-        xhr.onerror = () => {
-          console.error('❌ Erro de rede no download');
-          reject(new Error('Erro de rede ao baixar APK. Verifique sua conexão.'));
-        };
-        
-        xhr.ontimeout = () => {
-          console.error('❌ Timeout no download');
-          reject(new Error('Timeout ao baixar APK. Tente novamente.'));
-        };
-        
-        xhr.timeout = 60000; // 60 segundos
-        xhr.send();
+      const response = await CapacitorHttp.get({
+        url: app.apkUrl,
+        responseType: 'blob',
+        connectTimeout: 60000,
+        readTimeout: 60000,
       });
       
-      // Convert ArrayBuffer to base64
-      console.log('🔵 Convertendo para base64...');
-      const bytes = new Uint8Array(arrayBuffer);
-      let binary = '';
-      for (let i = 0; i < bytes.byteLength; i++) {
-        binary += String.fromCharCode(bytes[i]);
+      console.log('🔵 Download concluído via CapacitorHttp');
+      console.log('🔵 Response status:', response.status);
+      
+      if (response.status !== 200) {
+        throw new Error(`Erro HTTP ${response.status}`);
       }
-      const base64 = btoa(binary);
-      console.log('🔵 Base64 criado, tamanho:', base64.length);
+      
+      // O CapacitorHttp já retorna em base64 quando responseType é blob
+      const base64 = response.data;
+      console.log('🔵 Dados recebidos, tamanho:', base64.length);
       
       // Save to device
       const fileName = `${app.packageName}.apk`;
