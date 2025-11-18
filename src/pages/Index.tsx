@@ -84,47 +84,69 @@ const Index = () => {
     }
 
     try {
+      console.log('🔵 Iniciando instalação:', app.name);
+      
       toast({
         title: "Baixando...",
         description: `Iniciando download de ${app.name}`,
       });
 
-      // Download APK usando fetch e Filesystem
+      console.log('🔵 Fazendo fetch do APK:', app.apkUrl);
       const response = await fetch(app.apkUrl);
+      
+      if (!response.ok) {
+        throw new Error(`Erro no download: ${response.status}`);
+      }
+      
+      console.log('🔵 Fetch concluído, convertendo para blob...');
       const blob = await response.blob();
+      console.log('🔵 Blob criado, tamanho:', blob.size);
       
       // Convert blob to base64
-      const base64Data = await new Promise<string>((resolve) => {
+      console.log('🔵 Convertendo para base64...');
+      const base64Data = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
         reader.readAsDataURL(blob);
       });
       
       const base64 = base64Data.split(',')[1];
+      console.log('🔵 Base64 criado, primeiros 100 chars:', base64.substring(0, 100));
       
       // Save to device
       const fileName = `${app.packageName}.apk`;
+      console.log('🔵 Salvando arquivo:', fileName);
+      
       const result = await Filesystem.writeFile({
         path: fileName,
         data: base64,
         directory: Directory.Cache,
       });
 
+      console.log('🔵 Arquivo salvo com sucesso:', result.uri);
+
       toast({
         title: "Download concluído",
         description: "Abrindo instalador...",
       });
 
+      console.log('🔵 Abrindo FileOpener...');
+      
       // Open APK with native installer
       await FileOpener.open({
         filePath: result.uri,
         contentType: 'application/vnd.android.package-archive',
       });
+      
+      console.log('🔵 FileOpener aberto com sucesso');
     } catch (error) {
-      console.error('Install error:', error);
+      console.error('❌ Erro na instalação:', error);
+      console.error('❌ Detalhes do erro:', JSON.stringify(error));
+      
       toast({
         title: "Erro",
-        description: "Falha ao baixar/instalar o app",
+        description: error instanceof Error ? error.message : "Falha ao baixar/instalar o app",
         variant: "destructive",
       });
     }
