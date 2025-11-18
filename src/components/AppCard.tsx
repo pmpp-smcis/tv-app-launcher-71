@@ -8,11 +8,12 @@ interface AppCardProps {
   app: AppItem;
   onInstall: (app: AppItem) => void;
   onUninstall: (app: AppItem) => void;
+  isInstalled: boolean;
   isFocused: boolean;
   onFocus: () => void;
 }
 
-export const AppCard = ({ app, onInstall, onUninstall, isFocused, onFocus }: AppCardProps) => {
+export const AppCard = ({ app, onInstall, onUninstall, isInstalled, isFocused, onFocus }: AppCardProps) => {
   const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -57,18 +58,20 @@ export const AppCard = ({ app, onInstall, onUninstall, isFocused, onFocus }: App
             size="sm"
           >
             <Download className="mr-2 h-4 w-4" />
-            Instalar
+            {isInstalled ? 'Reinstalar' : 'Instalar'}
           </Button>
           
-          <Button
-            onClick={() => onUninstall(app)}
-            variant="outline"
-            className="w-full focus:ring-4 focus:ring-tv-focus h-9"
-            size="sm"
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            Desinstalar
-          </Button>
+          {isInstalled && (
+            <Button
+              onClick={() => onUninstall(app)}
+              variant="outline"
+              className="w-full focus:ring-4 focus:ring-tv-focus h-9"
+              size="sm"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Desinstalar
+            </Button>
+          )}
         </div>
       </div>
     </Card>

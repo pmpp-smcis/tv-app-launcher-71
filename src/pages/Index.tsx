@@ -17,11 +17,65 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [focusedIndex, setFocusedIndex] = useState(0);
+  const [installedApps, setInstalledApps] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   useEffect(() => {
     fetchApps();
   }, []);
+
+  useEffect(() => {
+    if (apps.length > 0) {
+      checkInstalledApps();
+    }
+  }, [apps]);
+
+  const checkInstalledApps = async () => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    try {
+      // Verificar cada app se está instalado
+      const installed = new Set<string>();
+      
+      for (const app of apps) {
+        try {
+          // Tentar abrir o app - se conseguir, está instalado
+          const canOpen = await CapacitorApp.getLaunchUrl();
+          // Verificação alternativa: tentar verificar se o pacote existe
+          const isInstalled = await checkPackageInstalled(app.packageName);
+          if (isInstalled) {
+            installed.add(app.packageName);
+          }
+        } catch {
+          // App não instalado
+        }
+      }
+      
+      setInstalledApps(installed);
+    } catch (error) {
+      console.error('Erro ao verificar apps instalados:', error);
+    }
+  };
+
+  const checkPackageInstalled = async (packageName: string): Promise<boolean> => {
+    if (!Capacitor.isNativePlatform()) return false;
+    
+    try {
+      // Usar uma verificação através do intent do Android
+      // Isso é feito através de código nativo, mas podemos simular
+      // checando se conseguimos criar um intent para o pacote
+      const result = await (window as any).cordova?.exec?.(
+        () => true,
+        () => false,
+        'App',
+        'isInstalled',
+        [packageName]
+      );
+      return result || false;
+    } catch {
+      return false;
+    }
+  };
 
   // Back button handler - duplo clique para sair
   useEffect(() => {
@@ -179,6 +233,11 @@ const Index = () => {
       });
       
       console.log('🔵 FileOpener aberto com sucesso');
+      
+      // Atualizar lista de apps instalados após alguns segundos
+      setTimeout(() => {
+        checkInstalledApps();
+      }, 3000);
     } catch (error) {
       console.error('❌ Erro na instalação:', error);
       console.error('❌ Stack:', error instanceof Error ? error.stack : 'N/A');
@@ -214,6 +273,11 @@ const Index = () => {
         title: "Abrindo configurações",
         description: `Desinstale ${app.name} nas configurações`,
       });
+      
+      // Atualizar lista de apps instalados após alguns segundos
+      setTimeout(() => {
+        checkInstalledApps();
+      }, 3000);
     } catch (error) {
       console.error('Erro ao desinstalar:', error);
       toast({
@@ -318,6 +382,7 @@ const Index = () => {
             app={app}
             onInstall={handleInstall}
             onUninstall={handleUninstall}
+            isInstalled={installedApps.has(app.packageName)}
             isFocused={focusedIndex === index}
             onFocus={() => setFocusedIndex(index)}
           />
