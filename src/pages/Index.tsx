@@ -3,9 +3,11 @@ import { AppCard } from "@/components/AppCard";
 import { AppItem } from "@/types/app";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Capacitor } from '@capacitor/core';
 
 // Configure your JSON URL here
-const APPS_JSON_URL = "https://github.com/pmpp-smcis/apoio/raw/refs/heads/main/apps.json";
+const APPS_JSON_URL = "https://raw.githubusercontent.com/pmpp-smcis/apoio/refs/heads/main/apps.json";
 const LOCAL_FALLBACK_JSON = "/apps-example.json";
 
 const Index = () => {
@@ -73,19 +75,54 @@ const Index = () => {
     }
   };
 
-  const handleInstall = useCallback((app: AppItem) => {
-    toast({
-      title: "Baixando...",
-      description: `Iniciando download de ${app.name}`,
-    });
+  const handleInstall = useCallback(async (app: AppItem) => {
+    if (!Capacitor.isNativePlatform()) {
+      // Fallback for web
+      window.open(app.apkUrl, "_blank");
+      return;
+    }
 
-    // Open APK URL for download
-    window.open(app.apkUrl, "_blank");
+    try {
+      toast({
+        title: "Baixando...",
+        description: `Iniciando download de ${app.name}`,
+      });
 
-    // In a real Android TV app with Capacitor, you would use:
-    // import { Filesystem } from '@capacitor/filesystem';
-    // import { Browser } from '@capacitor/browser';
-    // Then download and install the APK programmatically
+      // Download APK
+      const response = await fetch(app.apkUrl);
+      const blob = await response.blob();
+      const reader = new FileReader();
+      
+      reader.onloadend = async () => {
+        const base64Data = reader.result as string;
+        const base64 = base64Data.split(',')[1];
+        
+        // Save to device
+        const fileName = `${app.packageName}.apk`;
+        const result = await Filesystem.writeFile({
+          path: fileName,
+          data: base64,
+          directory: Directory.Cache,
+        });
+
+        toast({
+          title: "Download concluído",
+          description: "Abrindo instalador...",
+        });
+
+        // Open file using native file viewer
+        window.open(result.uri, '_system');
+      };
+      
+      reader.readAsDataURL(blob);
+    } catch (error) {
+      console.error('Install error:', error);
+      toast({
+        title: "Erro",
+        description: "Falha ao baixar/instalar o app",
+        variant: "destructive",
+      });
+    }
   }, [toast]);
 
   // Keyboard navigation for D-pad
