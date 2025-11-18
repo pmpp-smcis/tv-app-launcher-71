@@ -244,30 +244,34 @@ const Index = () => {
     }
 
     try {
-      // Abrir configurações do app para desinstalar
-      await CapacitorApp.exitApp(); // Força o Android a sair e abrir o intent
-      const packageName = app.packageName;
-      const uninstallUrl = `package:${packageName}`;
+      console.log('🔵 Iniciando desinstalação:', app.name, app.packageName);
       
-      // Usar window.open com scheme do Android
-      (window as any).open(uninstallUrl, '_system');
+      // Criar intent de desinstalação do Android
+      const uninstallIntent = `intent://package=${app.packageName}#Intent;scheme=package;action=android.intent.action.DELETE;end`;
       
-      // Marcar como desinstalado
-      markAsUninstalled(app.packageName);
+      // Tentar abrir o intent de desinstalação
+      window.location.href = uninstallIntent;
       
       toast({
-        title: "App marcado para desinstalar",
-        description: `Desinstale ${app.name} nas configurações do Android`,
+        title: "Desinstalando...",
+        description: `Confirme a desinstalação de ${app.name}`,
       });
+
+      // Aguardar um pouco e marcar como desinstalado
+      // O usuário pode cancelar, mas na maioria dos casos vai desinstalar
+      setTimeout(() => {
+        markAsUninstalled(app.packageName);
+      }, 2000);
+      
     } catch (error) {
-      console.error('Erro ao desinstalar:', error);
+      console.error('❌ Erro ao desinstalar:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível abrir as configurações",
+        description: "Não foi possível iniciar a desinstalação",
         variant: "destructive",
       });
     }
-  }, [toast]);
+  }, [toast, markAsUninstalled]);
 
   // Keyboard navigation for D-pad
   useEffect(() => {
