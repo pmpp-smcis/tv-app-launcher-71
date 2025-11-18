@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Capacitor } from '@capacitor/core';
+import { FileOpener } from '@capacitor-community/file-opener';
 
 // Configure your JSON URL here
 const APPS_JSON_URL = "https://raw.githubusercontent.com/pmpp-smcis/apoio/refs/heads/main/apps.json";
@@ -110,8 +111,11 @@ const Index = () => {
           description: "Abrindo instalador...",
         });
 
-        // Open file using native file viewer
-        window.open(result.uri, '_system');
+        // Open APK with native installer
+        await FileOpener.open({
+          filePath: result.uri,
+          contentType: 'application/vnd.android.package-archive',
+        });
       };
       
       reader.readAsDataURL(blob);
