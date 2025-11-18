@@ -17,64 +17,32 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [focusedIndex, setFocusedIndex] = useState(0);
-  const [installedApps, setInstalledApps] = useState<Set<string>>(new Set());
+  const [installedApps, setInstalledApps] = useState<Set<string>>(() => {
+    // Carregar apps instalados do localStorage
+    const stored = localStorage.getItem('installedApps');
+    return stored ? new Set(JSON.parse(stored)) : new Set();
+  });
   const { toast } = useToast();
 
   useEffect(() => {
     fetchApps();
   }, []);
 
+  // Salvar no localStorage sempre que a lista mudar
   useEffect(() => {
-    if (apps.length > 0) {
-      checkInstalledApps();
-    }
-  }, [apps]);
+    localStorage.setItem('installedApps', JSON.stringify([...installedApps]));
+  }, [installedApps]);
 
-  const checkInstalledApps = async () => {
-    if (!Capacitor.isNativePlatform()) return;
-
-    try {
-      // Verificar cada app se está instalado
-      const installed = new Set<string>();
-      
-      for (const app of apps) {
-        try {
-          // Tentar abrir o app - se conseguir, está instalado
-          const canOpen = await CapacitorApp.getLaunchUrl();
-          // Verificação alternativa: tentar verificar se o pacote existe
-          const isInstalled = await checkPackageInstalled(app.packageName);
-          if (isInstalled) {
-            installed.add(app.packageName);
-          }
-        } catch {
-          // App não instalado
-        }
-      }
-      
-      setInstalledApps(installed);
-    } catch (error) {
-      console.error('Erro ao verificar apps instalados:', error);
-    }
+  const markAsInstalled = (packageName: string) => {
+    setInstalledApps(prev => new Set([...prev, packageName]));
   };
 
-  const checkPackageInstalled = async (packageName: string): Promise<boolean> => {
-    if (!Capacitor.isNativePlatform()) return false;
-    
-    try {
-      // Usar uma verificação através do intent do Android
-      // Isso é feito através de código nativo, mas podemos simular
-      // checando se conseguimos criar um intent para o pacote
-      const result = await (window as any).cordova?.exec?.(
-        () => true,
-        () => false,
-        'App',
-        'isInstalled',
-        [packageName]
-      );
-      return result || false;
-    } catch {
-      return false;
-    }
+  const markAsUninstalled = (packageName: string) => {
+    setInstalledApps(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(packageName);
+      return newSet;
+    });
   };
 
   // Back button handler - duplo clique para sair
@@ -246,10 +214,13 @@ const Index = () => {
       
       console.log('🔵 FileOpener aberto com sucesso');
       
-      // Atualizar lista de apps instalados após alguns segundos
-      setTimeout(() => {
-        checkInstalledApps();
-      }, 3000);
+      // Marcar como instalado
+      markAsInstalled(app.packageName);
+      
+      toast({
+        title: "App instalado",
+        description: `${app.name} foi marcado como instalado`,
+      });
     } catch (error) {
       console.error('❌ Erro na instalação:', error);
       console.error('❌ Stack:', error instanceof Error ? error.stack : 'N/A');
@@ -281,15 +252,13 @@ const Index = () => {
       // Usar window.open com scheme do Android
       (window as any).open(uninstallUrl, '_system');
       
-      toast({
-        title: "Abrindo configurações",
-        description: `Desinstale ${app.name} nas configurações`,
-      });
+      // Marcar como desinstalado
+      markAsUninstalled(app.packageName);
       
-      // Atualizar lista de apps instalados após alguns segundos
-      setTimeout(() => {
-        checkInstalledApps();
-      }, 3000);
+      toast({
+        title: "App marcado para desinstalar",
+        description: `Desinstale ${app.name} nas configurações do Android`,
+      });
     } catch (error) {
       console.error('Erro ao desinstalar:', error);
       toast({
