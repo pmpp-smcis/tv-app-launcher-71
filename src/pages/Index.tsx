@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Capacitor, CapacitorHttp } from '@capacitor/core';
 import { FileOpener } from '@capacitor-community/file-opener';
+import { App as CapacitorApp } from '@capacitor/app';
 
 // Configure your JSON URL here
 const APPS_JSON_URL = "https://raw.githubusercontent.com/pmpp-smcis/apoio/refs/heads/main/apps.json";
@@ -21,6 +22,45 @@ const Index = () => {
   useEffect(() => {
     fetchApps();
   }, []);
+
+  // Back button handler - duplo clique para sair
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    let backPressCount = 0;
+    let backPressTimer: NodeJS.Timeout;
+
+    const setupBackHandler = async () => {
+      const backHandler = await CapacitorApp.addListener('backButton', () => {
+        backPressCount++;
+
+        if (backPressCount === 1) {
+          toast({
+            title: "Pressione novamente para sair",
+            duration: 2000,
+          });
+
+          backPressTimer = setTimeout(() => {
+            backPressCount = 0;
+          }, 2000);
+        } else if (backPressCount === 2) {
+          clearTimeout(backPressTimer);
+          CapacitorApp.exitApp();
+        }
+      });
+
+      return () => {
+        backHandler.remove();
+      };
+    };
+
+    let cleanup: (() => void) | undefined;
+    setupBackHandler().then(fn => { cleanup = fn; });
+
+    return () => {
+      if (cleanup) cleanup();
+    };
+  }, [toast]);
 
   const fetchApps = async () => {
     try {
@@ -118,9 +158,9 @@ const Index = () => {
       console.log('🔵 Salvando arquivo:', fileName);
       
       const result = await Filesystem.writeFile({
-        path: fileName,
+        path: `Download/${fileName}`,
         data: base64,
-        directory: Directory.Cache,
+        directory: Directory.Documents,
       });
 
       console.log('🔵 Arquivo salvo em:', result.uri);
@@ -146,6 +186,39 @@ const Index = () => {
       toast({
         title: "Erro",
         description: error instanceof Error ? error.message : "Falha ao baixar/instalar o app",
+        variant: "destructive",
+      });
+    }
+  }, [toast]);
+
+  const handleUninstall = useCallback(async (app: AppItem) => {
+    if (!Capacitor.isNativePlatform()) {
+      toast({
+        title: "Não disponível",
+        description: "Desinstalação só funciona no app Android",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Abrir configurações do app para desinstalar
+      await CapacitorApp.exitApp(); // Força o Android a sair e abrir o intent
+      const packageName = app.packageName;
+      const uninstallUrl = `package:${packageName}`;
+      
+      // Usar window.open com scheme do Android
+      (window as any).open(uninstallUrl, '_system');
+      
+      toast({
+        title: "Abrindo configurações",
+        description: `Desinstale ${app.name} nas configurações`,
+      });
+    } catch (error) {
+      console.error('Erro ao desinstalar:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível abrir as configurações",
         variant: "destructive",
       });
     }
@@ -244,6 +317,7 @@ const Index = () => {
             key={app.id}
             app={app}
             onInstall={handleInstall}
+            onUninstall={handleUninstall}
             isFocused={focusedIndex === index}
             onFocus={() => setFocusedIndex(index)}
           />
