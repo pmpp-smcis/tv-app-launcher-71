@@ -7,7 +7,6 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Capacitor, CapacitorHttp } from '@capacitor/core';
 import { FileOpener } from '@capacitor-community/file-opener';
 import { App as CapacitorApp } from '@capacitor/app';
-import { Browser } from '@capacitor/browser';
 
 // Configure your JSON URL here
 const APPS_JSON_URL = "https://raw.githubusercontent.com/pmpp-smcis/apoio/refs/heads/main/apps.json";
@@ -264,33 +263,28 @@ const Index = () => {
     try {
       console.log('🔵 Iniciando desinstalação:', app.name, app.packageName);
       
-      // Usar Browser plugin do Capacitor para abrir o intent de desinstalação
-      const uninstallUrl = `package:${app.packageName}`;
+      // Criar URL de desinstalação do Android
+      const uninstallUrl = `intent://details?id=${app.packageName}#Intent;scheme=package;action=android.settings.APPLICATION_DETAILS_SETTINGS;end`;
       
-      await Browser.open({
-        url: uninstallUrl,
-        presentationStyle: 'popover'
-      });
+      // Abrir a tela de detalhes do app onde o usuário pode desinstalar
+      window.location.href = uninstallUrl;
       
       toast({
-        title: "Desinstalando...",
-        description: `Confirme a desinstalação de ${app.name} nas configurações`,
+        title: "Configurações do App",
+        description: `Desinstale ${app.name} através das configurações`,
+        duration: 5000,
       });
 
-      // Marcar como desinstalado após um delay
+      // Marcar como desinstalado após um delay maior
       setTimeout(() => {
         markAsUninstalled(app.packageName);
-        toast({
-          title: "App removido da lista",
-          description: `${app.name} foi marcado como desinstalado`,
-        });
-      }, 3000);
+      }, 5000);
       
     } catch (error) {
       console.error('❌ Erro ao desinstalar:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível iniciar a desinstalação",
+        description: "Não foi possível abrir as configurações",
         variant: "destructive",
       });
     }
@@ -301,29 +295,36 @@ const Index = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (apps.length === 0) return;
 
-      const cols = Math.floor(window.innerWidth / 320); // Approximate columns
+      const cols = Math.floor(window.innerWidth / 320);
       const currentApp = apps[focusedIndex];
       const hasUninstallButton = currentApp && installedApps.has(currentApp.packageName);
       
       switch (e.key) {
         case "ArrowRight":
           e.preventDefault();
-          setFocusedIndex((prev) => Math.min(prev + 1, apps.length - 1));
-          setFocusedButton('install');
+          // Se não estamos no último card, ir para o próximo
+          if (focusedIndex < apps.length - 1) {
+            setFocusedIndex((prev) => prev + 1);
+            setFocusedButton('install');
+          }
           break;
         case "ArrowLeft":
           e.preventDefault();
-          setFocusedIndex((prev) => Math.max(prev - 1, 0));
-          setFocusedButton('install');
+          // Se não estamos no primeiro card, ir para o anterior
+          if (focusedIndex > 0) {
+            setFocusedIndex((prev) => prev - 1);
+            setFocusedButton('install');
+          }
           break;
         case "ArrowDown":
           e.preventDefault();
-          // Se estamos no botão instalar e existe botão desinstalar, focar no desinstalar
+          // Se estamos no botão instalar e existe botão desinstalar, focar nele
           if (focusedButton === 'install' && hasUninstallButton) {
             setFocusedButton('uninstall');
-          } else {
-            // Senão, mover para o próximo card
-            setFocusedIndex((prev) => Math.min(prev + cols, apps.length - 1));
+          } else if (focusedButton === 'install' || focusedButton === 'uninstall') {
+            // Mover para a linha de baixo
+            const newIndex = Math.min(focusedIndex + cols, apps.length - 1);
+            setFocusedIndex(newIndex);
             setFocusedButton('install');
           }
           break;
@@ -333,18 +334,20 @@ const Index = () => {
           if (focusedButton === 'uninstall') {
             setFocusedButton('install');
           } else {
-            // Senão, mover para o card anterior
-            setFocusedIndex((prev) => Math.max(prev - cols, 0));
+            // Mover para a linha de cima
+            const newIndex = Math.max(focusedIndex - cols, 0);
+            setFocusedIndex(newIndex);
             setFocusedButton('install');
           }
           break;
         case "Enter":
           e.preventDefault();
-          if (apps[focusedIndex]) {
-            if (focusedButton === 'install') {
-              handleInstall(apps[focusedIndex]);
-            } else if (focusedButton === 'uninstall') {
-              handleUninstall(apps[focusedIndex]);
+          const app = apps[focusedIndex];
+          if (app) {
+            if (focusedButton === 'uninstall' && hasUninstallButton) {
+              handleUninstall(app);
+            } else {
+              handleInstall(app);
             }
           }
           break;
