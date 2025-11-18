@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 
 // Configure your JSON URL here
 const APPS_JSON_URL = "https://gitlab.com/vlb1/apps/-/raw/main/apps.json";
+const LOCAL_FALLBACK_JSON = "/apps-example.json";
 
 const Index = () => {
   const [apps, setApps] = useState<AppItem[]>([]);
@@ -22,15 +23,44 @@ const Index = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(APPS_JSON_URL);
       
+      // Try to fetch from remote URL first
+      let response = await fetch(APPS_JSON_URL);
+      
+      // If remote fails, try local fallback
       if (!response.ok) {
-        throw new Error("Falha ao carregar lista de apps");
+        console.log("Remote fetch failed, trying local fallback...");
+        response = await fetch(LOCAL_FALLBACK_JSON);
+        
+        if (!response.ok) {
+          throw new Error("Falha ao carregar lista de apps");
+        }
+        
+        toast({
+          title: "Modo Offline",
+          description: "Usando lista de apps local",
+        });
       }
       
       const data = await response.json();
       setApps(data.apps || []);
     } catch (err) {
+      // Last resort: try local fallback if not already tried
+      try {
+        const fallbackResponse = await fetch(LOCAL_FALLBACK_JSON);
+        if (fallbackResponse.ok) {
+          const data = await fallbackResponse.json();
+          setApps(data.apps || []);
+          toast({
+            title: "Modo Offline",
+            description: "Usando lista de apps local",
+          });
+          return;
+        }
+      } catch {
+        // Ignore fallback errors
+      }
+      
       const errorMessage = err instanceof Error ? err.message : "Erro desconhecido";
       setError(errorMessage);
       toast({
