@@ -85,34 +85,53 @@ const Index = () => {
 
     try {
       console.log('🔵 Iniciando instalação:', app.name);
+      console.log('🔵 URL do APK:', app.apkUrl);
       
       toast({
         title: "Baixando...",
         description: `Iniciando download de ${app.name}`,
       });
 
-      console.log('🔵 Fazendo fetch do APK:', app.apkUrl);
-      const response = await fetch(app.apkUrl);
+      // Usar XMLHttpRequest para melhor compatibilidade com Android
+      console.log('🔵 Iniciando download via XMLHttpRequest...');
       
-      if (!response.ok) {
-        throw new Error(`Erro no download: ${response.status}`);
-      }
-      
-      console.log('🔵 Fetch concluído, convertendo para blob...');
-      const blob = await response.blob();
-      console.log('🔵 Blob criado, tamanho:', blob.size);
-      
-      // Convert blob to base64
-      console.log('🔵 Convertendo para base64...');
-      const base64Data = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
+      const arrayBuffer = await new Promise<ArrayBuffer>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', app.apkUrl, true);
+        xhr.responseType = 'arraybuffer';
+        
+        xhr.onload = () => {
+          if (xhr.status === 200) {
+            console.log('🔵 Download concluído, tamanho:', xhr.response.byteLength);
+            resolve(xhr.response);
+          } else {
+            reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
+          }
+        };
+        
+        xhr.onerror = () => {
+          console.error('❌ Erro de rede no download');
+          reject(new Error('Erro de rede ao baixar APK. Verifique sua conexão.'));
+        };
+        
+        xhr.ontimeout = () => {
+          console.error('❌ Timeout no download');
+          reject(new Error('Timeout ao baixar APK. Tente novamente.'));
+        };
+        
+        xhr.timeout = 60000; // 60 segundos
+        xhr.send();
       });
       
-      const base64 = base64Data.split(',')[1];
-      console.log('🔵 Base64 criado, primeiros 100 chars:', base64.substring(0, 100));
+      // Convert ArrayBuffer to base64
+      console.log('🔵 Convertendo para base64...');
+      const bytes = new Uint8Array(arrayBuffer);
+      let binary = '';
+      for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      const base64 = btoa(binary);
+      console.log('🔵 Base64 criado, tamanho:', base64.length);
       
       // Save to device
       const fileName = `${app.packageName}.apk`;
@@ -124,7 +143,7 @@ const Index = () => {
         directory: Directory.Cache,
       });
 
-      console.log('🔵 Arquivo salvo com sucesso:', result.uri);
+      console.log('🔵 Arquivo salvo em:', result.uri);
 
       toast({
         title: "Download concluído",
@@ -142,7 +161,7 @@ const Index = () => {
       console.log('🔵 FileOpener aberto com sucesso');
     } catch (error) {
       console.error('❌ Erro na instalação:', error);
-      console.error('❌ Detalhes do erro:', JSON.stringify(error));
+      console.error('❌ Stack:', error instanceof Error ? error.stack : 'N/A');
       
       toast({
         title: "Erro",
