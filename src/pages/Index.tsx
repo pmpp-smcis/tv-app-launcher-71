@@ -7,6 +7,7 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Capacitor, CapacitorHttp } from '@capacitor/core';
 import { FileOpener } from '@capacitor-community/file-opener';
 import { App as CapacitorApp } from '@capacitor/app';
+import { Browser } from '@capacitor/browser';
 
 // Configure your JSON URL here
 const APPS_JSON_URL = "https://raw.githubusercontent.com/pmpp-smcis/apoio/refs/heads/main/apps.json";
@@ -17,6 +18,7 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [focusedIndex, setFocusedIndex] = useState(0);
+  const [focusedButton, setFocusedButton] = useState<'install' | 'uninstall'>('install');
   const [installedApps, setInstalledApps] = useState<Set<string>>(() => {
     // Carregar apps instalados do localStorage
     const stored = localStorage.getItem('installedApps');
@@ -262,22 +264,27 @@ const Index = () => {
     try {
       console.log('🔵 Iniciando desinstalação:', app.name, app.packageName);
       
-      // Criar intent de desinstalação do Android
-      const uninstallIntent = `intent://package=${app.packageName}#Intent;scheme=package;action=android.intent.action.DELETE;end`;
+      // Usar Browser plugin do Capacitor para abrir o intent de desinstalação
+      const uninstallUrl = `package:${app.packageName}`;
       
-      // Tentar abrir o intent de desinstalação
-      window.location.href = uninstallIntent;
+      await Browser.open({
+        url: uninstallUrl,
+        presentationStyle: 'popover'
+      });
       
       toast({
         title: "Desinstalando...",
-        description: `Confirme a desinstalação de ${app.name}`,
+        description: `Confirme a desinstalação de ${app.name} nas configurações`,
       });
 
-      // Aguardar um pouco e marcar como desinstalado
-      // O usuário pode cancelar, mas na maioria dos casos vai desinstalar
+      // Marcar como desinstalado após um delay
       setTimeout(() => {
         markAsUninstalled(app.packageName);
-      }, 2000);
+        toast({
+          title: "App removido da lista",
+          description: `${app.name} foi marcado como desinstalado`,
+        });
+      }, 3000);
       
     } catch (error) {
       console.error('❌ Erro ao desinstalar:', error);
@@ -295,28 +302,50 @@ const Index = () => {
       if (apps.length === 0) return;
 
       const cols = Math.floor(window.innerWidth / 320); // Approximate columns
+      const currentApp = apps[focusedIndex];
+      const hasUninstallButton = currentApp && installedApps.has(currentApp.packageName);
       
       switch (e.key) {
         case "ArrowRight":
           e.preventDefault();
           setFocusedIndex((prev) => Math.min(prev + 1, apps.length - 1));
+          setFocusedButton('install');
           break;
         case "ArrowLeft":
           e.preventDefault();
           setFocusedIndex((prev) => Math.max(prev - 1, 0));
+          setFocusedButton('install');
           break;
         case "ArrowDown":
           e.preventDefault();
-          setFocusedIndex((prev) => Math.min(prev + cols, apps.length - 1));
+          // Se estamos no botão instalar e existe botão desinstalar, focar no desinstalar
+          if (focusedButton === 'install' && hasUninstallButton) {
+            setFocusedButton('uninstall');
+          } else {
+            // Senão, mover para o próximo card
+            setFocusedIndex((prev) => Math.min(prev + cols, apps.length - 1));
+            setFocusedButton('install');
+          }
           break;
         case "ArrowUp":
           e.preventDefault();
-          setFocusedIndex((prev) => Math.max(prev - cols, 0));
+          // Se estamos no botão desinstalar, voltar para instalar
+          if (focusedButton === 'uninstall') {
+            setFocusedButton('install');
+          } else {
+            // Senão, mover para o card anterior
+            setFocusedIndex((prev) => Math.max(prev - cols, 0));
+            setFocusedButton('install');
+          }
           break;
         case "Enter":
           e.preventDefault();
           if (apps[focusedIndex]) {
-            handleInstall(apps[focusedIndex]);
+            if (focusedButton === 'install') {
+              handleInstall(apps[focusedIndex]);
+            } else if (focusedButton === 'uninstall') {
+              handleUninstall(apps[focusedIndex]);
+            }
           }
           break;
       }
@@ -324,7 +353,7 @@ const Index = () => {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [apps, focusedIndex, handleInstall]);
+  }, [apps, focusedIndex, focusedButton, installedApps, handleInstall, handleUninstall]);
 
   if (loading) {
     return (
@@ -385,7 +414,12 @@ const Index = () => {
             onUninstall={handleUninstall}
             isInstalled={installedApps.has(app.packageName)}
             isFocused={focusedIndex === index}
-            onFocus={() => setFocusedIndex(index)}
+            onFocus={() => {
+              setFocusedIndex(index);
+              setFocusedButton('install');
+            }}
+            focusedButton={focusedIndex === index ? focusedButton : undefined}
+            onButtonFocus={(button) => setFocusedButton(button)}
           />
         ))}
       </div>

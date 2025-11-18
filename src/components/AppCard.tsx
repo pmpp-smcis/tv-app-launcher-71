@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Download, Trash2 } from "lucide-react";
@@ -11,16 +11,37 @@ interface AppCardProps {
   isInstalled: boolean;
   isFocused: boolean;
   onFocus: () => void;
+  focusedButton?: 'install' | 'uninstall';
+  onButtonFocus?: (button: 'install' | 'uninstall') => void;
 }
 
-export const AppCard = ({ app, onInstall, onUninstall, isInstalled, isFocused, onFocus }: AppCardProps) => {
+export const AppCard = ({ 
+  app, 
+  onInstall, 
+  onUninstall, 
+  isInstalled, 
+  isFocused, 
+  onFocus,
+  focusedButton,
+  onButtonFocus
+}: AppCardProps) => {
   const cardRef = useRef<HTMLDivElement>(null);
+  const installBtnRef = useRef<HTMLButtonElement>(null);
+  const uninstallBtnRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (isFocused && cardRef.current) {
       cardRef.current.focus();
     }
   }, [isFocused]);
+
+  useEffect(() => {
+    if (isFocused && focusedButton === 'install' && installBtnRef.current) {
+      installBtnRef.current.focus();
+    } else if (isFocused && focusedButton === 'uninstall' && uninstallBtnRef.current) {
+      uninstallBtnRef.current.focus();
+    }
+  }, [isFocused, focusedButton]);
 
   return (
     <Card
@@ -53,8 +74,12 @@ export const AppCard = ({ app, onInstall, onUninstall, isInstalled, isFocused, o
 
         <div className="w-full space-y-2">
           <Button
+            ref={installBtnRef}
             onClick={() => onInstall(app)}
-            className="w-full bg-primary hover:bg-primary/90 focus:ring-4 focus:ring-tv-focus h-9"
+            onFocus={() => onButtonFocus?.('install')}
+            className={`w-full bg-primary hover:bg-primary/90 h-9 ${
+              isFocused && focusedButton === 'install' ? 'ring-4 ring-tv-focus' : ''
+            }`}
             size="sm"
           >
             <Download className="mr-2 h-4 w-4" />
@@ -63,9 +88,13 @@ export const AppCard = ({ app, onInstall, onUninstall, isInstalled, isFocused, o
           
           {isInstalled && (
             <Button
+              ref={uninstallBtnRef}
               onClick={() => onUninstall(app)}
+              onFocus={() => onButtonFocus?.('uninstall')}
               variant="outline"
-              className="w-full focus:ring-4 focus:ring-tv-focus h-9"
+              className={`w-full h-9 ${
+                isFocused && focusedButton === 'uninstall' ? 'ring-4 ring-tv-focus' : ''
+              }`}
               size="sm"
             >
               <Trash2 className="mr-2 h-4 w-4" />
