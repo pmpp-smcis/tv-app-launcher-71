@@ -1,47 +1,29 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Download, Trash2 } from "lucide-react";
+import { Download } from "lucide-react";
 import { AppItem } from "@/types/app";
 
 interface AppCardProps {
   app: AppItem;
   onInstall: (app: AppItem) => void;
-  onUninstall: (app: AppItem) => void;
-  isInstalled: boolean;
   isFocused: boolean;
   onFocus: () => void;
-  focusedButton?: 'install' | 'uninstall';
-  onButtonFocus?: (button: 'install' | 'uninstall') => void;
 }
 
 export const AppCard = ({ 
   app, 
   onInstall, 
-  onUninstall, 
-  isInstalled, 
   isFocused, 
-  onFocus,
-  focusedButton,
-  onButtonFocus
+  onFocus
 }: AppCardProps) => {
   const cardRef = useRef<HTMLDivElement>(null);
-  const installBtnRef = useRef<HTMLButtonElement>(null);
-  const uninstallBtnRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (isFocused && cardRef.current) {
       cardRef.current.focus();
     }
   }, [isFocused]);
-
-  useEffect(() => {
-    if (isFocused && focusedButton === 'install' && installBtnRef.current) {
-      installBtnRef.current.focus();
-    } else if (isFocused && focusedButton === 'uninstall' && uninstallBtnRef.current) {
-      uninstallBtnRef.current.focus();
-    }
-  }, [isFocused, focusedButton]);
 
   return (
     <Card
@@ -72,36 +54,14 @@ export const AppCard = ({
           <p className="text-[10px] text-muted-foreground">v{app.version}</p>
         </div>
 
-        <div className="w-full space-y-2">
-          <Button
-            ref={installBtnRef}
-            onClick={() => onInstall(app)}
-            onFocus={() => onButtonFocus?.('install')}
-            className={`w-full bg-primary hover:bg-primary/90 h-9 ${
-              isFocused && focusedButton === 'install' ? 'ring-4 ring-tv-focus' : ''
-            }`}
-            size="sm"
-          >
-            <Download className="mr-2 h-4 w-4" />
-            {isInstalled ? 'Reinstalar' : 'Instalar'}
-          </Button>
-          
-          {isInstalled && (
-            <Button
-              ref={uninstallBtnRef}
-              onClick={() => onUninstall(app)}
-              onFocus={() => onButtonFocus?.('uninstall')}
-              variant="outline"
-              className={`w-full h-9 ${
-                isFocused && focusedButton === 'uninstall' ? 'ring-4 ring-tv-focus' : ''
-              }`}
-              size="sm"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Desinstalar
-            </Button>
-          )}
-        </div>
+        <Button
+          onClick={() => onInstall(app)}
+          className="w-full bg-primary hover:bg-primary/90 focus:ring-4 focus:ring-tv-focus h-10"
+          size="sm"
+        >
+          <Download className="mr-2 h-4 w-4" />
+          Instalar
+        </Button>
       </div>
     </Card>
   );

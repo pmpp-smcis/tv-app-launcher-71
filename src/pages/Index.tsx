@@ -17,34 +17,11 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [focusedIndex, setFocusedIndex] = useState(0);
-  const [focusedButton, setFocusedButton] = useState<'install' | 'uninstall'>('install');
-  const [installedApps, setInstalledApps] = useState<Set<string>>(() => {
-    // Carregar apps instalados do localStorage
-    const stored = localStorage.getItem('installedApps');
-    return stored ? new Set(JSON.parse(stored)) : new Set();
-  });
   const { toast } = useToast();
 
   useEffect(() => {
     fetchApps();
   }, []);
-
-  // Salvar no localStorage sempre que a lista mudar
-  useEffect(() => {
-    localStorage.setItem('installedApps', JSON.stringify([...installedApps]));
-  }, [installedApps]);
-
-  const markAsInstalled = (packageName: string) => {
-    setInstalledApps(prev => new Set([...prev, packageName]));
-  };
-
-  const markAsUninstalled = (packageName: string) => {
-    setInstalledApps(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(packageName);
-      return newSet;
-    });
-  };
 
   // Back button handler - duplo clique para sair
   useEffect(() => {
@@ -171,7 +148,7 @@ const Index = () => {
         description: `Iniciando download de ${app.name}`,
       });
 
-      // Usar CapacitorHttp que vem embutido no core - contorna restrições de CORS
+      // Usar CapacitorHttp que vem embutido no core
       console.log('🔵 Iniciando download via CapacitorHttp...');
       
       const response = await CapacitorHttp.get({
@@ -192,11 +169,11 @@ const Index = () => {
       const base64 = response.data;
       console.log('🔵 Dados recebidos, tamanho:', base64.length);
       
-      // Save to device - usar ExternalStorage para Downloads
+      // Save to device
       const fileName = `${app.packageName}.apk`;
       console.log('🔵 Salvando arquivo:', fileName);
       
-      // Primeiro, tentar criar o diretório Download se não existir
+      // Criar diretório Download se não existir
       try {
         await Filesystem.mkdir({
           path: 'Download',
@@ -231,12 +208,9 @@ const Index = () => {
       
       console.log('🔵 FileOpener aberto com sucesso');
       
-      // Marcar como instalado
-      markAsInstalled(app.packageName);
-      
       toast({
-        title: "App instalado",
-        description: `${app.name} foi marcado como instalado`,
+        title: "Instalador aberto",
+        description: `Siga as instruções para instalar ${app.name}`,
       });
     } catch (error) {
       console.error('❌ Erro na instalação:', error);
@@ -250,119 +224,38 @@ const Index = () => {
     }
   }, [toast]);
 
-  const handleUninstall = useCallback(async (app: AppItem) => {
-    if (!Capacitor.isNativePlatform()) {
-      toast({
-        title: "Não disponível",
-        description: "Desinstalação só funciona no app Android",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      console.log('🔵 Iniciando desinstalação:', app.name, app.packageName);
-      
-      // Abrir diálogo de desinstalação nativo do Android
-      // Este é o método mais direto - abre o diálogo de desinstalação do sistema
-      const uninstallUrl = `intent:#Intent;action=android.intent.action.DELETE;scheme=package;package=${app.packageName};end`;
-      
-      window.location.href = uninstallUrl;
-      
-      toast({
-        title: "Confirmação necessária",
-        description: `Por segurança, o Android requer sua confirmação para desinstalar ${app.name}`,
-        duration: 4000,
-      });
-
-      // Marcar como desinstalado após delay (usuário provavelmente confirmou)
-      setTimeout(() => {
-        markAsUninstalled(app.packageName);
-      }, 4000);
-      
-    } catch (error) {
-      console.error('❌ Erro ao desinstalar:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível iniciar a desinstalação",
-        variant: "destructive",
-      });
-    }
-  }, [toast, markAsUninstalled]);
-
   // Keyboard navigation for D-pad
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (apps.length === 0) return;
-
-      const currentApp = apps[focusedIndex];
-      const isInstalled = currentApp && installedApps.has(currentApp.packageName);
       
       switch (e.key) {
         case "ArrowRight":
           e.preventDefault();
-          // Mover para o próximo card
-          if (focusedIndex < apps.length - 1) {
-            setFocusedIndex(focusedIndex + 1);
-            setFocusedButton('install');
-          }
+          setFocusedIndex((prev) => Math.min(prev + 1, apps.length - 1));
           break;
           
         case "ArrowLeft":
           e.preventDefault();
-          // Mover para o card anterior
-          if (focusedIndex > 0) {
-            setFocusedIndex(focusedIndex - 1);
-            setFocusedButton('install');
-          }
+          setFocusedIndex((prev) => Math.max(prev - 1, 0));
           break;
           
         case "ArrowDown":
           e.preventDefault();
-          // Se está no botão instalar e tem botão desinstalar, focar nele
-          if (focusedButton === 'install' && isInstalled) {
-            console.log('🔵 Movendo foco para botão desinstalar');
-            setFocusedButton('uninstall');
-          } else {
-            // Senão, mover para próxima linha (aproximadamente)
-            const cols = Math.floor(window.innerWidth / 320);
-            const newIndex = Math.min(focusedIndex + cols, apps.length - 1);
-            if (newIndex !== focusedIndex) {
-              setFocusedIndex(newIndex);
-              setFocusedButton('install');
-            }
-          }
+          const cols = Math.floor(window.innerWidth / 320);
+          setFocusedIndex((prev) => Math.min(prev + cols, apps.length - 1));
           break;
           
         case "ArrowUp":
           e.preventDefault();
-          // Se está no botão desinstalar, voltar para instalar
-          if (focusedButton === 'uninstall') {
-            console.log('🔵 Movendo foco para botão instalar');
-            setFocusedButton('install');
-          } else {
-            // Senão, mover para linha anterior (aproximadamente)
-            const cols = Math.floor(window.innerWidth / 320);
-            const newIndex = Math.max(focusedIndex - cols, 0);
-            if (newIndex !== focusedIndex) {
-              setFocusedIndex(newIndex);
-              setFocusedButton('install');
-            }
-          }
+          const colsUp = Math.floor(window.innerWidth / 320);
+          setFocusedIndex((prev) => Math.max(prev - colsUp, 0));
           break;
           
         case "Enter":
           e.preventDefault();
-          const app = apps[focusedIndex];
-          if (app) {
-            console.log('🔵 Enter pressionado - botão:', focusedButton);
-            if (focusedButton === 'uninstall' && isInstalled) {
-              console.log('🔵 Chamando handleUninstall');
-              handleUninstall(app);
-            } else {
-              console.log('🔵 Chamando handleInstall');
-              handleInstall(app);
-            }
+          if (apps[focusedIndex]) {
+            handleInstall(apps[focusedIndex]);
           }
           break;
       }
@@ -370,7 +263,7 @@ const Index = () => {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [apps, focusedIndex, focusedButton, installedApps, handleInstall, handleUninstall]);
+  }, [apps, focusedIndex, handleInstall]);
 
   if (loading) {
     return (
@@ -428,15 +321,8 @@ const Index = () => {
             key={app.id}
             app={app}
             onInstall={handleInstall}
-            onUninstall={handleUninstall}
-            isInstalled={installedApps.has(app.packageName)}
             isFocused={focusedIndex === index}
-            onFocus={() => {
-              setFocusedIndex(index);
-              setFocusedButton('install');
-            }}
-            focusedButton={focusedIndex === index ? focusedButton : undefined}
-            onButtonFocus={(button) => setFocusedButton(button)}
+            onFocus={() => setFocusedIndex(index)}
           />
         ))}
       </div>
