@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Capacitor } from '@capacitor/core';
 import { FileOpener } from '@capacitor-community/file-opener';
+import { Http } from '@capacitor/http';
 
 // Configure your JSON URL here
 const APPS_JSON_URL = "https://raw.githubusercontent.com/pmpp-smcis/apoio/refs/heads/main/apps.json";
@@ -89,36 +90,24 @@ const Index = () => {
         description: `Iniciando download de ${app.name}`,
       });
 
-      // Download APK
-      const response = await fetch(app.apkUrl);
-      const blob = await response.blob();
-      const reader = new FileReader();
-      
-      reader.onloadend = async () => {
-        const base64Data = reader.result as string;
-        const base64 = base64Data.split(',')[1];
-        
-        // Save to device
-        const fileName = `${app.packageName}.apk`;
-        const result = await Filesystem.writeFile({
-          path: fileName,
-          data: base64,
-          directory: Directory.Cache,
-        });
+      // Download APK usando HTTP nativo do Capacitor
+      const fileName = `${app.packageName}.apk`;
+      const result = await Http.downloadFile({
+        url: app.apkUrl,
+        filePath: fileName,
+        fileDirectory: Directory.Cache,
+      });
 
-        toast({
-          title: "Download concluído",
-          description: "Abrindo instalador...",
-        });
+      toast({
+        title: "Download concluído",
+        description: "Abrindo instalador...",
+      });
 
-        // Open APK with native installer
-        await FileOpener.open({
-          filePath: result.uri,
-          contentType: 'application/vnd.android.package-archive',
-        });
-      };
-      
-      reader.readAsDataURL(blob);
+      // Open APK with native installer
+      await FileOpener.open({
+        filePath: result.path!,
+        contentType: 'application/vnd.android.package-archive',
+      });
     } catch (error) {
       console.error('Install error:', error);
       toast({
