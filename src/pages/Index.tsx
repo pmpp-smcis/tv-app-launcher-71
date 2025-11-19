@@ -296,13 +296,13 @@ const Index = () => {
           
         case "ArrowDown":
           e.preventDefault();
-          const cols = Math.floor(window.innerWidth / 320);
+          const cols = window.innerWidth >= 1280 ? 6 : Math.floor(window.innerWidth / 320);
           setFocusedIndex((prev) => Math.min(prev + cols, apps.length - 1));
           break;
           
         case "ArrowUp":
           e.preventDefault();
-          const colsUp = Math.floor(window.innerWidth / 320);
+          const colsUp = window.innerWidth >= 1280 ? 6 : Math.floor(window.innerWidth / 320);
           setFocusedIndex((prev) => Math.max(prev - colsUp, 0));
           break;
           
@@ -362,11 +362,13 @@ const Index = () => {
     <div className="min-h-screen bg-background p-8 pt-16 pb-16">
       <header className="mb-12 text-center">
         {headerImage ? (
-          <img 
-            src={headerImage} 
-            alt="Header" 
-            className="w-full max-w-4xl mx-auto rounded-lg mb-4"
-          />
+          <div className="w-full max-w-4xl mx-auto mb-4 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] cursor-default border border-border/50">
+            <img 
+              src={headerImage} 
+              alt="Header" 
+              className="w-full rounded-lg"
+            />
+          </div>
         ) : (
           <>
             <h1 className="text-5xl font-bold text-foreground mb-4">
@@ -379,7 +381,7 @@ const Index = () => {
         )}
       </header>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 max-w-[1800px] mx-auto">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6 max-w-[1800px] mx-auto">
         {apps.map((app, index) => (
           <AppCard
             key={app.id}
