@@ -6,7 +6,6 @@ export interface AppItem {
   icon: string;
   apkUrl: string;
   packageName: string;
-  headerImage?: string;
 }
 
 export interface AppsData {
