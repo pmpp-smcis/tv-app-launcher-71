@@ -239,17 +239,29 @@ const Index = () => {
         description: `Siga as instruções para instalar ${app.name}`,
       });
 
-      // Aguardar e verificar novamente se foi instalado
-      setTimeout(async () => {
-        try {
-          const { value } = await AppLauncher.canOpenUrl({ url: app.packageName });
-          if (value) {
-            setInstalledApps(prev => new Set(prev).add(app.packageName));
+      // Verificar múltiplas vezes se o app foi instalado
+      const checkIntervals = [3000, 6000, 10000, 15000, 20000, 30000];
+      let installed = false;
+      
+      checkIntervals.forEach((interval) => {
+        setTimeout(async () => {
+          if (installed) return; // Já detectou, não precisa continuar
+          
+          try {
+            const { value } = await AppLauncher.canOpenUrl({ url: app.packageName });
+            if (value && !installed) {
+              installed = true;
+              setInstalledApps(prev => new Set(prev).add(app.packageName));
+              toast({
+                title: "Instalação detectada!",
+                description: `${app.name} foi instalado com sucesso`,
+              });
+            }
+          } catch (e) {
+            console.log('Verificando instalação:', e);
           }
-        } catch (e) {
-          console.log('Erro ao verificar instalação:', e);
-        }
-      }, 3000);
+        }, interval);
+      });
     } catch (error) {
       console.error('❌ Erro na instalação:', error);
       console.error('❌ Stack:', error instanceof Error ? error.stack : 'N/A');
