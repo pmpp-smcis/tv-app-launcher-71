@@ -57,14 +57,24 @@ export const AppCard = ({
         </div>
 
         {isInstalled ? (
-          <Button
-            disabled
-            className="w-full h-10 bg-green-600/20 text-green-400 border border-green-600/50 cursor-default"
-            size="sm"
-          >
-            <CheckCircle2 className="mr-2 h-4 w-4" />
-            Instalado
-          </Button>
+          <div className="w-full space-y-2">
+            <Button
+              onClick={() => onInstall(app)}
+              className="w-full bg-primary hover:bg-primary/90 focus:ring-4 focus:ring-tv-focus h-10"
+              size="sm"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Reinstalar
+            </Button>
+            <Button
+              disabled
+              className="w-full h-10 bg-green-600/20 text-green-400 border border-green-600/50 cursor-default"
+              size="sm"
+            >
+              <CheckCircle2 className="mr-2 h-4 w-4" />
+              Instalado
+            </Button>
+          </div>
         ) : (
           <Button
             onClick={() => onInstall(app)}
