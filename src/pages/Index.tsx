@@ -359,8 +359,8 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-8 pt-16 pb-16">
-      <header className="mb-6 text-center">
+    <div className="min-h-screen bg-background p-8 pt-6 pb-16">
+      <header className="mb-12 text-center">
         {headerImage ? (
           <div className="w-full max-w-4xl mx-auto mb-4 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] cursor-default border border-border/50">
             <img 
