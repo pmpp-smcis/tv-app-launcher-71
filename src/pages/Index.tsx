@@ -422,8 +422,11 @@ const Index = () => {
             key={app.id}
             app={app}
             onInstall={handleInstall}
-            isFocused={focusedIndex === index}
-            onFocus={() => setFocusedIndex(index)}
+            isFocused={!bannerFocused && focusedIndex === index}
+            onFocus={() => {
+              setBannerFocused(false);
+              setFocusedIndex(index);
+            }}
             isInstalled={installedApps.has(app.packageName)}
           />
         ))}
