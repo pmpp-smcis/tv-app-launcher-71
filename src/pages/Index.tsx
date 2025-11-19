@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { AppCard } from "@/components/AppCard";
-import { AppItem } from "@/types/app";
+import { AppItem, AppsData } from "@/types/app";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { Filesystem, Directory } from '@capacitor/filesystem';
@@ -19,6 +19,7 @@ const Index = () => {
   const [error, setError] = useState<string | null>(null);
   const [focusedIndex, setFocusedIndex] = useState(0);
   const [installedApps, setInstalledApps] = useState<Set<string>>(new Set());
+  const [headerImage, setHeaderImage] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -107,9 +108,10 @@ const Index = () => {
         console.log('🔵 Response status:', response.status);
         
         if (response.status === 200) {
-          const data = response.data;
+          const data: AppsData = response.data;
           console.log('🔵 Apps carregados:', data.apps?.length || 0);
           setApps(data.apps || []);
+          setHeaderImage(data.headerImage || null);
           return;
         }
         
@@ -122,8 +124,9 @@ const Index = () => {
           throw new Error(`HTTP ${response.status}`);
         }
         
-        const data = await response.json();
+        const data: AppsData = await response.json();
         setApps(data.apps || []);
+        setHeaderImage(data.headerImage || null);
       }
     } catch (err) {
       console.error('❌ Erro ao buscar apps:', err);
@@ -134,8 +137,9 @@ const Index = () => {
         const fallbackResponse = await fetch(LOCAL_FALLBACK_JSON);
         
         if (fallbackResponse.ok) {
-          const data = await fallbackResponse.json();
+          const data: AppsData = await fallbackResponse.json();
           setApps(data.apps || []);
+          setHeaderImage(data.headerImage || null);
           toast({
             title: "Modo Offline",
             description: "Usando lista de apps local",
@@ -357,12 +361,22 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background p-8 pt-16 pb-16">
       <header className="mb-12 text-center">
-        <h1 className="text-5xl font-bold text-foreground mb-4">
-          Loja de Apps
-        </h1>
-        <p className="text-xl text-muted-foreground">
-          Use as setas do controle para navegar • Enter para instalar
-        </p>
+        {headerImage ? (
+          <img 
+            src={headerImage} 
+            alt="Header" 
+            className="w-full max-w-4xl mx-auto rounded-lg mb-4"
+          />
+        ) : (
+          <>
+            <h1 className="text-5xl font-bold text-foreground mb-4">
+              Loja de Apps
+            </h1>
+            <p className="text-xl text-muted-foreground">
+              Use as setas do controle para navegar • Enter para instalar
+            </p>
+          </>
+        )}
       </header>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 max-w-[1800px] mx-auto">
