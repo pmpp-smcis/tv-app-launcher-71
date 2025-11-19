@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { AppCard } from "@/components/AppCard";
 import { AppItem, AppsData } from "@/types/app";
 import { useToast } from "@/hooks/use-toast";
@@ -19,6 +19,7 @@ const Index = () => {
   const [error, setError] = useState<string | null>(null);
   const [focusedIndex, setFocusedIndex] = useState(0);
   const [bannerFocused, setBannerFocused] = useState(false);
+  const bannerRef = useRef<HTMLDivElement>(null);
   const [installedApps, setInstalledApps] = useState<Set<string>>(new Set());
   const [headerImage, setHeaderImage] = useState<string | null>(null);
   const { toast } = useToast();
@@ -279,6 +280,16 @@ const Index = () => {
     }
   }, [toast]);
 
+  // Scroll automático quando banner está focado
+  useEffect(() => {
+    if (bannerFocused && bannerRef.current) {
+      bannerRef.current.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
+      });
+    }
+  }, [bannerFocused]);
+
   // Keyboard navigation for D-pad
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -388,10 +399,11 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background p-8 pt-6 pb-16">
-      <header className="mb-12 text-center">
+      <header className="mb-10 text-center">
         {headerImage ? (
           <div 
-            className={`w-full max-w-5xl mx-auto mb-4 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] cursor-default border-2 ${
+            ref={bannerRef}
+            className={`w-full max-w-4xl mx-auto mb-4 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] cursor-default border-2 ${
               bannerFocused 
                 ? 'border-primary ring-4 ring-primary/30 scale-[1.02]' 
                 : 'border-border/50'
@@ -402,7 +414,7 @@ const Index = () => {
               src={headerImage} 
               alt="Header" 
               className="w-full h-auto rounded-lg object-contain"
-              style={{ maxHeight: '300px' }}
+              style={{ maxHeight: '220px' }}
             />
           </div>
         ) : (
