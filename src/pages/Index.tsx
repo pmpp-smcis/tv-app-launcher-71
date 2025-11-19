@@ -391,7 +391,7 @@ const Index = () => {
       <header className="mb-12 text-center">
         {headerImage ? (
           <div 
-            className={`w-full max-w-4xl mx-auto mb-4 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] cursor-default border-2 ${
+            className={`w-full max-w-5xl mx-auto mb-4 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] cursor-default border-2 ${
               bannerFocused 
                 ? 'border-primary ring-4 ring-primary/30 scale-[1.02]' 
                 : 'border-border/50'
@@ -401,7 +401,8 @@ const Index = () => {
             <img 
               src={headerImage} 
               alt="Header" 
-              className="w-full rounded-lg"
+              className="w-full h-auto rounded-lg object-contain"
+              style={{ maxHeight: '300px' }}
             />
           </div>
         ) : (
