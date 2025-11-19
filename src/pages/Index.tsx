@@ -398,8 +398,8 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6 pt-4 pb-12">
-      <header className="mb-6 text-center">
+    <div className="min-h-screen bg-background p-4 pt-3 pb-8">
+      <header className="mb-4 text-center">
         {headerImage ? (
           <div 
             ref={bannerRef}
@@ -414,7 +414,7 @@ const Index = () => {
               src={headerImage} 
               alt="Header" 
               className="w-full h-auto rounded-lg object-contain"
-              style={{ maxHeight: '180px' }}
+              style={{ maxHeight: '150px' }}
             />
           </div>
         ) : (
@@ -429,7 +429,7 @@ const Index = () => {
         )}
       </header>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 max-w-[1800px] mx-auto">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 max-w-[1800px] mx-auto">
         {apps.map((app, index) => (
           <AppCard
             key={app.id}

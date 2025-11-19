@@ -38,8 +38,8 @@ export const AppCard = ({
         ${isFocused ? "ring-4 ring-tv-focus shadow-tv-focus scale-105" : ""}
       `}
     >
-      <div className="p-3 flex flex-col items-center text-center space-y-2">
-        <div className="w-16 h-16 rounded-xl bg-muted flex items-center justify-center overflow-hidden">
+      <div className="p-2 flex flex-col items-center text-center space-y-1.5">
+        <div className="w-14 h-14 rounded-xl bg-muted flex items-center justify-center overflow-hidden">
           <img
             src={app.icon}
             alt={app.name}
@@ -50,38 +50,38 @@ export const AppCard = ({
           />
         </div>
         
-        <div className="flex-1 min-h-[60px]">
-          <h3 className="text-base font-semibold text-foreground mb-1 line-clamp-1">{app.name}</h3>
-          <p className="text-xs text-muted-foreground line-clamp-2 mb-1">{app.description}</p>
-          <p className="text-[10px] text-muted-foreground">v{app.version}</p>
+        <div className="flex-1 min-h-[50px]">
+          <h3 className="text-sm font-semibold text-foreground mb-0.5 line-clamp-1">{app.name}</h3>
+          <p className="text-[11px] text-muted-foreground line-clamp-2 mb-0.5">{app.description}</p>
+          <p className="text-[9px] text-muted-foreground">v{app.version}</p>
         </div>
 
         {isInstalled ? (
-          <div className="w-full space-y-2">
+          <div className="w-full space-y-1.5">
             <Button
               onClick={() => onInstall(app)}
-              className="w-full bg-primary hover:bg-primary/90 focus:ring-4 focus:ring-tv-focus h-9 text-xs"
+              className="w-full bg-primary hover:bg-primary/90 focus:ring-4 focus:ring-tv-focus h-8 text-[11px] py-1"
               size="sm"
             >
-              <Download className="mr-2 h-3 w-3" />
+              <Download className="mr-1.5 h-3 w-3" />
               Reinstalar
             </Button>
             <Button
               disabled
-              className="w-full h-9 text-xs bg-green-600/20 text-green-400 border border-green-600/50 cursor-default"
+              className="w-full h-8 text-[11px] py-1 bg-green-600/20 text-green-400 border border-green-600/50 cursor-default"
               size="sm"
             >
-              <CheckCircle2 className="mr-2 h-3 w-3" />
+              <CheckCircle2 className="mr-1.5 h-3 w-3" />
               Instalado
             </Button>
           </div>
         ) : (
           <Button
             onClick={() => onInstall(app)}
-            className="w-full bg-primary hover:bg-primary/90 focus:ring-4 focus:ring-tv-focus h-9 text-xs"
+            className="w-full bg-primary hover:bg-primary/90 focus:ring-4 focus:ring-tv-focus h-8 text-[11px] py-1"
             size="sm"
           >
-            <Download className="mr-2 h-3 w-3" />
+            <Download className="mr-1.5 h-3 w-3" />
             Instalar
           </Button>
         )}
