@@ -1,7 +1,7 @@
 import { useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Download } from "lucide-react";
+import { Download, CheckCircle2 } from "lucide-react";
 import { AppItem } from "@/types/app";
 
 interface AppCardProps {
@@ -9,13 +9,15 @@ interface AppCardProps {
   onInstall: (app: AppItem) => void;
   isFocused: boolean;
   onFocus: () => void;
+  isInstalled?: boolean;
 }
 
 export const AppCard = ({ 
   app, 
   onInstall, 
   isFocused, 
-  onFocus
+  onFocus,
+  isInstalled = false
 }: AppCardProps) => {
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -54,14 +56,25 @@ export const AppCard = ({
           <p className="text-[10px] text-muted-foreground">v{app.version}</p>
         </div>
 
-        <Button
-          onClick={() => onInstall(app)}
-          className="w-full bg-primary hover:bg-primary/90 focus:ring-4 focus:ring-tv-focus h-10"
-          size="sm"
-        >
-          <Download className="mr-2 h-4 w-4" />
-          Instalar
-        </Button>
+        {isInstalled ? (
+          <Button
+            disabled
+            className="w-full h-10 bg-green-600/20 text-green-400 border border-green-600/50 cursor-default"
+            size="sm"
+          >
+            <CheckCircle2 className="mr-2 h-4 w-4" />
+            Instalado
+          </Button>
+        ) : (
+          <Button
+            onClick={() => onInstall(app)}
+            className="w-full bg-primary hover:bg-primary/90 focus:ring-4 focus:ring-tv-focus h-10"
+            size="sm"
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Instalar
+          </Button>
+        )}
       </div>
     </Card>
   );
