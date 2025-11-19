@@ -18,6 +18,7 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [focusedIndex, setFocusedIndex] = useState(0);
+  const [bannerFocused, setBannerFocused] = useState(false);
   const [installedApps, setInstalledApps] = useState<Set<string>>(new Set());
   const [headerImage, setHeaderImage] = useState<string | null>(null);
   const { toast } = useToast();
@@ -286,16 +287,30 @@ const Index = () => {
       switch (e.key) {
         case "ArrowRight":
           e.preventDefault();
+          if (bannerFocused) {
+            // Do nothing on banner
+            return;
+          }
           setFocusedIndex((prev) => Math.min(prev + 1, apps.length - 1));
           break;
           
         case "ArrowLeft":
           e.preventDefault();
+          if (bannerFocused) {
+            // Do nothing on banner
+            return;
+          }
           setFocusedIndex((prev) => Math.max(prev - 1, 0));
           break;
           
         case "ArrowDown":
           e.preventDefault();
+          if (bannerFocused) {
+            // Move from banner to first row of apps
+            setBannerFocused(false);
+            setFocusedIndex(0);
+            return;
+          }
           const cols = window.innerWidth >= 1280 ? 6 : Math.floor(window.innerWidth / 320);
           setFocusedIndex((prev) => Math.min(prev + cols, apps.length - 1));
           break;
@@ -303,11 +318,24 @@ const Index = () => {
         case "ArrowUp":
           e.preventDefault();
           const colsUp = window.innerWidth >= 1280 ? 6 : Math.floor(window.innerWidth / 320);
+          // If in first row, go to banner
+          if (focusedIndex < colsUp && !bannerFocused) {
+            setBannerFocused(true);
+            return;
+          }
+          if (bannerFocused) {
+            // Already at banner, do nothing
+            return;
+          }
           setFocusedIndex((prev) => Math.max(prev - colsUp, 0));
           break;
           
         case "Enter":
           e.preventDefault();
+          if (bannerFocused) {
+            // Banner is just visual, no action
+            return;
+          }
           if (apps[focusedIndex]) {
             handleInstall(apps[focusedIndex]);
           }
@@ -317,7 +345,7 @@ const Index = () => {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [apps, focusedIndex, handleInstall]);
+  }, [apps, focusedIndex, bannerFocused, handleInstall]);
 
   if (loading) {
     return (
@@ -362,7 +390,14 @@ const Index = () => {
     <div className="min-h-screen bg-background p-8 pt-6 pb-16">
       <header className="mb-12 text-center">
         {headerImage ? (
-          <div className="w-full max-w-4xl mx-auto mb-4 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] cursor-default border border-border/50">
+          <div 
+            className={`w-full max-w-4xl mx-auto mb-4 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] cursor-default border-2 ${
+              bannerFocused 
+                ? 'border-primary ring-4 ring-primary/30 scale-[1.02]' 
+                : 'border-border/50'
+            }`}
+            onMouseEnter={() => !bannerFocused && setBannerFocused(false)}
+          >
             <img 
               src={headerImage} 
               alt="Header" 
