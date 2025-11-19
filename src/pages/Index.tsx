@@ -355,7 +355,7 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-8">
+    <div className="min-h-screen bg-background p-8 pt-16 pb-16">
       <header className="mb-12 text-center">
         <h1 className="text-5xl font-bold text-foreground mb-4">
           Loja de Apps
