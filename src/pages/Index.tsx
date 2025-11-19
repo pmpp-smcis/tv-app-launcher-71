@@ -7,6 +7,7 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Capacitor, CapacitorHttp } from '@capacitor/core';
 import { FileOpener } from '@capacitor-community/file-opener';
 import { App as CapacitorApp } from '@capacitor/app';
+import { AppLauncher } from '@capacitor/app-launcher';
 
 // Configure your JSON URL here
 const APPS_JSON_URL = "https://raw.githubusercontent.com/pmpp-smcis/apoio/refs/heads/main/apps.json";
@@ -17,11 +18,36 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [focusedIndex, setFocusedIndex] = useState(0);
+  const [installedApps, setInstalledApps] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   useEffect(() => {
     fetchApps();
   }, []);
+
+  // Verificar apps instalados
+  useEffect(() => {
+    const checkInstalledApps = async () => {
+      if (!Capacitor.isNativePlatform() || apps.length === 0) return;
+
+      const installed = new Set<string>();
+
+      for (const app of apps) {
+        try {
+          const { value } = await AppLauncher.canOpenUrl({ url: app.packageName });
+          if (value) {
+            installed.add(app.packageName);
+          }
+        } catch (error) {
+          console.log(`Não foi possível verificar ${app.packageName}:`, error);
+        }
+      }
+
+      setInstalledApps(installed);
+    };
+
+    checkInstalledApps();
+  }, [apps]);
 
   // Back button handler - duplo clique para sair
   useEffect(() => {
@@ -212,6 +238,18 @@ const Index = () => {
         title: "Instalador aberto",
         description: `Siga as instruções para instalar ${app.name}`,
       });
+
+      // Aguardar e verificar novamente se foi instalado
+      setTimeout(async () => {
+        try {
+          const { value } = await AppLauncher.canOpenUrl({ url: app.packageName });
+          if (value) {
+            setInstalledApps(prev => new Set(prev).add(app.packageName));
+          }
+        } catch (e) {
+          console.log('Erro ao verificar instalação:', e);
+        }
+      }, 3000);
     } catch (error) {
       console.error('❌ Erro na instalação:', error);
       console.error('❌ Stack:', error instanceof Error ? error.stack : 'N/A');
@@ -323,6 +361,7 @@ const Index = () => {
             onInstall={handleInstall}
             isFocused={focusedIndex === index}
             onFocus={() => setFocusedIndex(index)}
+            isInstalled={installedApps.has(app.packageName)}
           />
         ))}
       </div>
