@@ -190,12 +190,19 @@ const Index = () => {
       const progressInterval = setInterval(() => {
         setDownloadProgress(prev => {
           const current = prev[app.packageName] || 0;
-          if (current < 85) {
+          // Progresso mais lento conforme avança, nunca chega a 100% até download terminar
+          if (current < 30) {
             return { ...prev, [app.packageName]: current + 5 };
+          } else if (current < 60) {
+            return { ...prev, [app.packageName]: current + 3 };
+          } else if (current < 80) {
+            return { ...prev, [app.packageName]: current + 2 };
+          } else if (current < 95) {
+            return { ...prev, [app.packageName]: current + 1 };
           }
           return prev;
         });
-      }, 800);
+      }, 1000);
 
       // Usar CapacitorHttp que vem embutido no core
       console.log('🔵 Iniciando download via CapacitorHttp...');
