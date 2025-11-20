@@ -1,7 +1,8 @@
 import { useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Download, CheckCircle2 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Download, CheckCircle2, Loader2 } from "lucide-react";
 import { AppItem } from "@/types/app";
 
 interface AppCardProps {
@@ -10,6 +11,8 @@ interface AppCardProps {
   isFocused: boolean;
   onFocus: () => void;
   isInstalled?: boolean;
+  isDownloading?: boolean;
+  downloadProgress?: number;
 }
 
 export const AppCard = ({ 
@@ -17,7 +20,9 @@ export const AppCard = ({
   onInstall, 
   isFocused, 
   onFocus,
-  isInstalled = false
+  isInstalled = false,
+  isDownloading = false,
+  downloadProgress = 0
 }: AppCardProps) => {
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -56,7 +61,20 @@ export const AppCard = ({
           <p className="text-[9px] text-muted-foreground">v{app.version}</p>
         </div>
 
-        {isInstalled ? (
+        {isDownloading ? (
+          <div className="w-full space-y-1.5">
+            <Button
+              disabled
+              className="w-full h-8 text-[11px] py-1 bg-primary/50 cursor-wait"
+              size="sm"
+            >
+              <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+              Baixando...
+            </Button>
+            <Progress value={downloadProgress} className="h-2" />
+            <p className="text-[10px] text-center text-muted-foreground">{downloadProgress}%</p>
+          </div>
+        ) : isInstalled ? (
           <div className="w-full space-y-1.5">
             <Button
               onClick={() => onInstall(app)}

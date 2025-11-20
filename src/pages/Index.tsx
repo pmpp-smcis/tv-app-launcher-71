@@ -22,6 +22,8 @@ const Index = () => {
   const bannerRef = useRef<HTMLDivElement>(null);
   const [installedApps, setInstalledApps] = useState<Set<string>>(new Set());
   const [headerImage, setHeaderImage] = useState<string | null>(null);
+  const [downloadingApps, setDownloadingApps] = useState<Set<string>>(new Set());
+  const [downloadProgress, setDownloadProgress] = useState<Record<string, number>>({});
   const { toast } = useToast();
 
   useEffect(() => {
@@ -175,10 +177,25 @@ const Index = () => {
       console.log('🔵 Iniciando instalação:', app.name);
       console.log('🔵 URL do APK:', app.apkUrl);
       
+      // Marcar como baixando
+      setDownloadingApps(prev => new Set(prev).add(app.packageName));
+      setDownloadProgress(prev => ({ ...prev, [app.packageName]: 0 }));
+      
       toast({
         title: "Baixando...",
         description: `Iniciando download de ${app.name}`,
       });
+
+      // Simular progresso já que CapacitorHttp não tem callback de progresso
+      const progressInterval = setInterval(() => {
+        setDownloadProgress(prev => {
+          const current = prev[app.packageName] || 0;
+          if (current < 90) {
+            return { ...prev, [app.packageName]: current + 10 };
+          }
+          return prev;
+        });
+      }, 500);
 
       // Usar CapacitorHttp que vem embutido no core
       console.log('🔵 Iniciando download via CapacitorHttp...');
@@ -189,6 +206,9 @@ const Index = () => {
         connectTimeout: 60000,
         readTimeout: 60000,
       });
+      
+      clearInterval(progressInterval);
+      setDownloadProgress(prev => ({ ...prev, [app.packageName]: 100 }));
       
       console.log('🔵 Download concluído via CapacitorHttp');
       console.log('🔵 Response status:', response.status);
@@ -245,6 +265,18 @@ const Index = () => {
         description: `Siga as instruções para instalar ${app.name}`,
       });
 
+      // Limpar estado de download
+      setDownloadingApps(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(app.packageName);
+        return newSet;
+      });
+      setDownloadProgress(prev => {
+        const newProgress = { ...prev };
+        delete newProgress[app.packageName];
+        return newProgress;
+      });
+
       // Verificar múltiplas vezes se o app foi instalado
       const checkIntervals = [3000, 6000, 10000, 15000, 20000, 30000];
       let installed = false;
@@ -271,6 +303,18 @@ const Index = () => {
     } catch (error) {
       console.error('❌ Erro na instalação:', error);
       console.error('❌ Stack:', error instanceof Error ? error.stack : 'N/A');
+      
+      // Limpar estado de download em caso de erro
+      setDownloadingApps(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(app.packageName);
+        return newSet;
+      });
+      setDownloadProgress(prev => {
+        const newProgress = { ...prev };
+        delete newProgress[app.packageName];
+        return newProgress;
+      });
       
       toast({
         title: "Erro",
@@ -441,6 +485,8 @@ const Index = () => {
               setFocusedIndex(index);
             }}
             isInstalled={installedApps.has(app.packageName)}
+            isDownloading={downloadingApps.has(app.packageName)}
+            downloadProgress={downloadProgress[app.packageName]}
           />
         ))}
       </div>
