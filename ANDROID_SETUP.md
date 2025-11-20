@@ -82,9 +82,12 @@ Após essa configuração:
 
 **IMPORTANTE**: Apps instalados por esta loja podem não aparecer automaticamente na tela inicial do Android TV.
 
-**Por quê?** Para um app aparecer na tela inicial do Android TV, ele precisa ter a categoria `LEANBACK_LAUNCHER` no seu AndroidManifest.xml:
+**Por quê?** Para um app aparecer na tela inicial do Android TV, ele precisa ter a categoria `LEANBACK_LAUNCHER` no **AndroidManifest.xml do próprio app** (não no manifest da sua loja).
+
+**⚠️ NÃO ADICIONE ISSO NO MANIFEST DA SUA LOJA!** Isso deve estar nos APKs que você vai distribuir:
 
 ```xml
+<!-- Isso vai no AndroidManifest.xml do APP que será instalado, NÃO na sua loja -->
 <intent-filter>
     <action android:name="android.intent.action.MAIN" />
     <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
@@ -92,8 +95,11 @@ Após essa configuração:
 ```
 
 **Soluções:**
-1. Os APKs que você distribuir devem incluir essa categoria no manifest
+1. Os APKs que você distribuir devem incluir essa categoria no manifest deles
 2. Usuários podem acessar apps instalados em: **Configurações → Apps → Ver todos os apps**
 3. Alternativamente, use um launcher personalizado que mostre todos os apps
 
-**Nota**: Esta loja de apps não pode modificar os APKs durante a instalação, então isso precisa ser configurado nos APKs originais antes da distribuição.
+**Resumo:**
+- ✅ Sua loja precisa apenas do `<queries>` no AndroidManifest (passos 1-5 acima)
+- ❌ Sua loja NÃO precisa do `LEANBACK_LAUNCHER`
+- ✅ Os APKs que você distribuir precisam do `LEANBACK_LAUNCHER` para aparecer na tela inicial
