@@ -99,38 +99,16 @@ const Index = () => {
       
       console.log('🔵 Buscando apps de:', APPS_JSON_URL);
       
-      // Use CapacitorHttp for native platform, fetch for web
-      if (Capacitor.isNativePlatform()) {
-        const response = await CapacitorHttp.get({
-          url: APPS_JSON_URL,
-          responseType: 'json',
-          connectTimeout: 10000,
-          readTimeout: 10000,
-        });
-        
-        console.log('🔵 Response status:', response.status);
-        
-        if (response.status === 200) {
-          const data: AppsData = response.data;
-          console.log('🔵 Apps carregados:', data.apps?.length || 0);
-          setApps(data.apps || []);
-          setHeaderImage(data.headerImage || null);
-          return;
-        }
-        
+      const response = await fetch(APPS_JSON_URL);
+      
+      if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
-      } else {
-        // Web fallback using fetch
-        const response = await fetch(APPS_JSON_URL);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-        
-        const data: AppsData = await response.json();
-        setApps(data.apps || []);
-        setHeaderImage(data.headerImage || null);
       }
+      
+      const data: AppsData = await response.json();
+      console.log('🔵 Apps carregados:', data.apps?.length || 0);
+      setApps(data.apps || []);
+      setHeaderImage(data.headerImage || null);
     } catch (err) {
       console.error('❌ Erro ao buscar apps:', err);
       
