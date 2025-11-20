@@ -204,35 +204,8 @@ const Index = () => {
         });
       }, 1000);
 
-      // Usar CapacitorHttp que vem embutido no core
-      console.log('🔵 Iniciando download via CapacitorHttp...');
-      
-      const response = await CapacitorHttp.get({
-        url: app.apkUrl,
-        responseType: 'blob',
-        connectTimeout: 300000, // 5 minutos
-        readTimeout: 300000, // 5 minutos
-      });
-      
-      clearInterval(progressInterval);
-      setDownloadProgress(prev => ({ ...prev, [app.packageName]: 100 }));
-      
-      console.log('🔵 Download concluído via CapacitorHttp');
-      console.log('🔵 Response status:', response.status);
-      
-      if (response.status !== 200) {
-        throw new Error(`Erro HTTP ${response.status}`);
-      }
-      
-      // O CapacitorHttp já retorna em base64 quando responseType é blob
-      const base64 = response.data;
-      console.log('🔵 Dados recebidos, tamanho:', base64.length);
-      
-      // Save to device
-      const fileName = `${app.packageName}.apk`;
-      console.log('🔵 Salvando arquivo:', fileName);
-      
       // Criar diretório Download se não existir
+      console.log('🔵 Preparando diretório...');
       try {
         await Filesystem.mkdir({
           path: 'Download',
@@ -240,11 +213,47 @@ const Index = () => {
           recursive: true
         });
       } catch (e) {
-        console.log('🔵 Diretório Download já existe ou erro ao criar:', e);
+        console.log('🔵 Diretório Download já existe:', e);
+      }
+
+      const fileName = `${app.packageName}.apk`;
+      const filePath = `Download/${fileName}`;
+      
+      console.log('🔵 Iniciando download...');
+      
+      // Usar fetch que é mais confiável para arquivos grandes
+      const fetchResponse = await fetch(app.apkUrl);
+      
+      if (!fetchResponse.ok) {
+        throw new Error(`Erro HTTP ${fetchResponse.status}`);
       }
       
+      console.log('🔵 Convertendo para blob...');
+      const blob = await fetchResponse.blob();
+      
+      console.log('🔵 Arquivo baixado, tamanho:', blob.size, 'bytes');
+      
+      // Converter blob para base64
+      console.log('🔵 Convertendo para base64...');
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const result = reader.result as string;
+          // Remover prefixo "data:application/...;base64,"
+          const base64Data = result.split(',')[1];
+          resolve(base64Data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      
+      clearInterval(progressInterval);
+      setDownloadProgress(prev => ({ ...prev, [app.packageName]: 100 }));
+      
+      console.log('🔵 Salvando arquivo...');
+      
       const result = await Filesystem.writeFile({
-        path: `Download/${fileName}`,
+        path: filePath,
         data: base64,
         directory: Directory.ExternalStorage,
         recursive: true
