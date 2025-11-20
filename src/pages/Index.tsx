@@ -219,42 +219,32 @@ const Index = () => {
       const fileName = `${app.packageName}.apk`;
       const filePath = `Download/${fileName}`;
       
-      console.log('🔵 Iniciando download...');
+      console.log('🔵 Iniciando download via CapacitorHttp...');
+      console.log('🔵 URL:', app.apkUrl);
       
-      // Usar fetch que é mais confiável para arquivos grandes
-      const fetchResponse = await fetch(app.apkUrl);
-      
-      if (!fetchResponse.ok) {
-        throw new Error(`Erro HTTP ${fetchResponse.status}`);
-      }
-      
-      console.log('🔵 Convertendo para blob...');
-      const blob = await fetchResponse.blob();
-      
-      console.log('🔵 Arquivo baixado, tamanho:', blob.size, 'bytes');
-      
-      // Converter blob para base64
-      console.log('🔵 Convertendo para base64...');
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const result = reader.result as string;
-          // Remover prefixo "data:application/...;base64,"
-          const base64Data = result.split(',')[1];
-          resolve(base64Data);
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
+      // Usar CapacitorHttp.get com responseType blob
+      const response = await CapacitorHttp.get({
+        url: app.apkUrl,
+        responseType: 'blob',
+        connectTimeout: 600000, // 10 minutos
+        readTimeout: 600000, // 10 minutos
       });
       
       clearInterval(progressInterval);
       setDownloadProgress(prev => ({ ...prev, [app.packageName]: 100 }));
       
-      console.log('🔵 Salvando arquivo...');
+      console.log('🔵 Download concluído, status:', response.status);
       
+      if (response.status !== 200) {
+        throw new Error(`Erro HTTP ${response.status}`);
+      }
+      
+      console.log('🔵 Salvando arquivo no diretório Download...');
+      
+      // O CapacitorHttp retorna dados em base64 quando responseType é blob
       const result = await Filesystem.writeFile({
         path: filePath,
-        data: base64,
+        data: response.data,
         directory: Directory.ExternalStorage,
         recursive: true
       });
