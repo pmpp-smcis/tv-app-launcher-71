@@ -41,6 +41,29 @@ Adicione este bloco **ANTES** da tag `<application>`:
 </manifest>
 ```
 
+### 3.1. Adicionar LEANBACK_LAUNCHER para Android TV
+
+Para que a **própria loja apareça na tela inicial do Android TV**, você precisa adicionar a categoria `LEANBACK_LAUNCHER` na activity principal.
+
+Dentro da tag `<application>`, localize a `<activity>` principal (geralmente `MainActivity`) e **adicione** a linha `<category android:name="android.intent.category.LEANBACK_LAUNCHER" />` no `<intent-filter>`:
+
+```xml
+<application ...>
+    <activity
+        android:name=".MainActivity"
+        ...>
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+            <!-- ADICIONE ESTA LINHA ABAIXO ↓ -->
+            <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+        </intent-filter>
+    </activity>
+</application>
+```
+
+**Resultado:** Sua loja agora aparecerá na tela inicial do Android TV! 📺
+
 ### 4. Substitua pelos seus package names
 
 Pegue os `packageName` do seu arquivo `apps.json` e adicione cada um como uma linha `<package>`.
@@ -78,28 +101,10 @@ Após essa configuração:
 - A verificação acontece automaticamente ao abrir o app
 - Durante o download, aparecerá uma barra de progresso
 
-## 📱 Android TV - Apps na Tela Inicial
+## 📱 Android TV - Resumo
 
-**IMPORTANTE**: Apps instalados por esta loja podem não aparecer automaticamente na tela inicial do Android TV.
+✅ **Para sua loja aparecer na tela inicial:** Adicione `LEANBACK_LAUNCHER` no manifest da loja (passo 3.1 acima)
 
-**Por quê?** Para um app aparecer na tela inicial do Android TV, ele precisa ter a categoria `LEANBACK_LAUNCHER` no **AndroidManifest.xml do próprio app** (não no manifest da sua loja).
+✅ **Para verificar apps instalados no Android 11+:** Adicione os package names em `<queries>` (passo 3 acima)
 
-**⚠️ NÃO ADICIONE ISSO NO MANIFEST DA SUA LOJA!** Isso deve estar nos APKs que você vai distribuir:
-
-```xml
-<!-- Isso vai no AndroidManifest.xml do APP que será instalado, NÃO na sua loja -->
-<intent-filter>
-    <action android:name="android.intent.action.MAIN" />
-    <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-</intent-filter>
-```
-
-**Soluções:**
-1. Os APKs que você distribuir devem incluir essa categoria no manifest deles
-2. Usuários podem acessar apps instalados em: **Configurações → Apps → Ver todos os apps**
-3. Alternativamente, use um launcher personalizado que mostre todos os apps
-
-**Resumo:**
-- ✅ Sua loja precisa apenas do `<queries>` no AndroidManifest (passos 1-5 acima)
-- ❌ Sua loja NÃO precisa do `LEANBACK_LAUNCHER`
-- ✅ Os APKs que você distribuir precisam do `LEANBACK_LAUNCHER` para aparecer na tela inicial
+✅ **Apps instalados pela loja:** Aparecerão na tela inicial normalmente se tiverem `LEANBACK_LAUNCHER` no próprio manifest deles
