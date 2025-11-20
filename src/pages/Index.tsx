@@ -190,12 +190,12 @@ const Index = () => {
       const progressInterval = setInterval(() => {
         setDownloadProgress(prev => {
           const current = prev[app.packageName] || 0;
-          if (current < 90) {
-            return { ...prev, [app.packageName]: current + 10 };
+          if (current < 85) {
+            return { ...prev, [app.packageName]: current + 5 };
           }
           return prev;
         });
-      }, 500);
+      }, 800);
 
       // Usar CapacitorHttp que vem embutido no core
       console.log('🔵 Iniciando download via CapacitorHttp...');
@@ -203,8 +203,8 @@ const Index = () => {
       const response = await CapacitorHttp.get({
         url: app.apkUrl,
         responseType: 'blob',
-        connectTimeout: 60000,
-        readTimeout: 60000,
+        connectTimeout: 300000, // 5 minutos
+        readTimeout: 300000, // 5 minutos
       });
       
       clearInterval(progressInterval);
