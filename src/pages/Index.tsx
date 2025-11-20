@@ -3,9 +3,8 @@ import { AppCard } from "@/components/AppCard";
 import { AppItem, AppsData } from "@/types/app";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import { Filesystem, Directory } from '@capacitor/filesystem';
-import { Capacitor, CapacitorHttp } from '@capacitor/core';
-import { FileOpener } from '@capacitor-community/file-opener';
+import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
 import { App as CapacitorApp } from '@capacitor/app';
 import { AppLauncher } from '@capacitor/app-launcher';
 
@@ -167,164 +166,59 @@ const Index = () => {
   };
 
   const handleInstall = useCallback(async (app: AppItem) => {
-    if (!Capacitor.isNativePlatform()) {
-      // Fallback for web
-      window.open(app.apkUrl, "_blank");
-      return;
-    }
-
     try {
-      console.log('🔵 Iniciando instalação:', app.name);
-      console.log('🔵 URL do APK:', app.apkUrl);
-      
-      // Marcar como baixando
-      setDownloadingApps(prev => new Set(prev).add(app.packageName));
-      setDownloadProgress(prev => ({ ...prev, [app.packageName]: 0 }));
+      console.log('🔵 Abrindo URL do APK:', app.apkUrl);
       
       toast({
-        title: "Baixando...",
-        description: `Iniciando download de ${app.name}`,
+        title: "Abrindo download...",
+        description: `${app.name} será baixado pelo navegador`,
       });
 
-      // Simular progresso já que CapacitorHttp não tem callback de progresso
-      const progressInterval = setInterval(() => {
-        setDownloadProgress(prev => {
-          const current = prev[app.packageName] || 0;
-          // Progresso mais lento conforme avança, nunca chega a 100% até download terminar
-          if (current < 30) {
-            return { ...prev, [app.packageName]: current + 5 };
-          } else if (current < 60) {
-            return { ...prev, [app.packageName]: current + 3 };
-          } else if (current < 80) {
-            return { ...prev, [app.packageName]: current + 2 };
-          } else if (current < 95) {
-            return { ...prev, [app.packageName]: current + 1 };
-          }
-          return prev;
+      if (Capacitor.isNativePlatform()) {
+        // Abrir no navegador nativo do Android - ele sabe baixar e instalar APKs
+        await Browser.open({ 
+          url: app.apkUrl,
+          presentationStyle: 'popover'
         });
-      }, 1000);
-
-      // Criar diretório Download se não existir
-      console.log('🔵 Preparando diretório...');
-      try {
-        await Filesystem.mkdir({
-          path: 'Download',
-          directory: Directory.ExternalStorage,
-          recursive: true
+        
+        toast({
+          title: "Download iniciado",
+          description: "O Android vai baixar e instalar automaticamente",
         });
-      } catch (e) {
-        console.log('🔵 Diretório Download já existe:', e);
-      }
 
-      const fileName = `${app.packageName}.apk`;
-      const filePath = `Download/${fileName}`;
-      
-      console.log('🔵 Iniciando download via CapacitorHttp...');
-      console.log('🔵 URL:', app.apkUrl);
-      
-      // Usar CapacitorHttp.get com responseType blob
-      const response = await CapacitorHttp.get({
-        url: app.apkUrl,
-        responseType: 'blob',
-        connectTimeout: 600000, // 10 minutos
-        readTimeout: 600000, // 10 minutos
-      });
-      
-      clearInterval(progressInterval);
-      setDownloadProgress(prev => ({ ...prev, [app.packageName]: 100 }));
-      
-      console.log('🔵 Download concluído, status:', response.status);
-      
-      if (response.status !== 200) {
-        throw new Error(`Erro HTTP ${response.status}`);
-      }
-      
-      console.log('🔵 Salvando arquivo no diretório Download...');
-      
-      // O CapacitorHttp retorna dados em base64 quando responseType é blob
-      const result = await Filesystem.writeFile({
-        path: filePath,
-        data: response.data,
-        directory: Directory.ExternalStorage,
-        recursive: true
-      });
-
-      console.log('🔵 Arquivo salvo em:', result.uri);
-
-      toast({
-        title: "Download concluído",
-        description: "Abrindo instalador...",
-      });
-
-      console.log('🔵 Abrindo FileOpener...');
-      
-      // Open APK with native installer
-      await FileOpener.open({
-        filePath: result.uri,
-        contentType: 'application/vnd.android.package-archive',
-      });
-      
-      console.log('🔵 FileOpener aberto com sucesso');
-      
-      toast({
-        title: "Instalador aberto",
-        description: `Siga as instruções para instalar ${app.name}`,
-      });
-
-      // Limpar estado de download
-      setDownloadingApps(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(app.packageName);
-        return newSet;
-      });
-      setDownloadProgress(prev => {
-        const newProgress = { ...prev };
-        delete newProgress[app.packageName];
-        return newProgress;
-      });
-
-      // Verificar múltiplas vezes se o app foi instalado
-      const checkIntervals = [3000, 6000, 10000, 15000, 20000, 30000];
-      let installed = false;
-      
-      checkIntervals.forEach((interval) => {
-        setTimeout(async () => {
-          if (installed) return; // Já detectou, não precisa continuar
-          
-          try {
-            const { value } = await AppLauncher.canOpenUrl({ url: app.packageName });
-            if (value && !installed) {
-              installed = true;
-              setInstalledApps(prev => new Set(prev).add(app.packageName));
-              toast({
-                title: "Instalação detectada!",
-                description: `${app.name} foi instalado com sucesso`,
-              });
+        // Verificar múltiplas vezes se o app foi instalado
+        const checkIntervals = [5000, 10000, 20000, 30000, 45000, 60000];
+        let installed = false;
+        
+        checkIntervals.forEach((interval) => {
+          setTimeout(async () => {
+            if (installed) return;
+            
+            try {
+              const { value } = await AppLauncher.canOpenUrl({ url: app.packageName });
+              if (value && !installed) {
+                installed = true;
+                setInstalledApps(prev => new Set(prev).add(app.packageName));
+                toast({
+                  title: "Instalação detectada!",
+                  description: `${app.name} foi instalado com sucesso`,
+                });
+              }
+            } catch (e) {
+              console.log('Verificando instalação:', e);
             }
-          } catch (e) {
-            console.log('Verificando instalação:', e);
-          }
-        }, interval);
-      });
+          }, interval);
+        });
+      } else {
+        // Fallback web
+        window.open(app.apkUrl, "_blank");
+      }
     } catch (error) {
-      console.error('❌ Erro na instalação:', error);
-      console.error('❌ Stack:', error instanceof Error ? error.stack : 'N/A');
-      
-      // Limpar estado de download em caso de erro
-      setDownloadingApps(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(app.packageName);
-        return newSet;
-      });
-      setDownloadProgress(prev => {
-        const newProgress = { ...prev };
-        delete newProgress[app.packageName];
-        return newProgress;
-      });
+      console.error('❌ Erro ao abrir URL:', error);
       
       toast({
         title: "Erro",
-        description: error instanceof Error ? error.message : "Falha ao baixar/instalar o app",
+        description: error instanceof Error ? error.message : "Falha ao abrir download",
         variant: "destructive",
       });
     }
