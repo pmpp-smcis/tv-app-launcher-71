@@ -186,11 +186,10 @@ const Index = () => {
         description: `Iniciando download de ${app.name}`,
       });
 
-      // Simular progresso já que CapacitorHttp não tem callback de progresso
+      // Simular progresso de forma mais realista
       const progressInterval = setInterval(() => {
         setDownloadProgress(prev => {
           const current = prev[app.packageName] || 0;
-          // Progresso mais lento conforme avança, nunca chega a 100% até download terminar
           if (current < 30) {
             return { ...prev, [app.packageName]: current + 5 };
           } else if (current < 60) {
@@ -204,30 +203,17 @@ const Index = () => {
         });
       }, 1000);
 
-      // Criar diretório Download se não existir
-      console.log('🔵 Preparando diretório...');
-      try {
-        await Filesystem.mkdir({
-          path: 'Download',
-          directory: Directory.ExternalStorage,
-          recursive: true
-        });
-      } catch (e) {
-        console.log('🔵 Diretório Download já existe:', e);
-      }
-
       const fileName = `${app.packageName}.apk`;
       const filePath = `Download/${fileName}`;
       
       console.log('🔵 Iniciando download via CapacitorHttp...');
       console.log('🔵 URL:', app.apkUrl);
       
-      // Usar CapacitorHttp.get com responseType blob
       const response = await CapacitorHttp.get({
         url: app.apkUrl,
         responseType: 'blob',
-        connectTimeout: 600000, // 10 minutos
-        readTimeout: 600000, // 10 minutos
+        connectTimeout: 600000,
+        readTimeout: 600000,
       });
       
       clearInterval(progressInterval);
@@ -239,9 +225,14 @@ const Index = () => {
         throw new Error(`Erro HTTP ${response.status}`);
       }
       
-      console.log('🔵 Salvando arquivo no diretório Download...');
+      console.log('🔵 Salvando arquivo...');
       
-      // O CapacitorHttp retorna dados em base64 quando responseType é blob
+      await Filesystem.mkdir({
+        path: 'Download',
+        directory: Directory.ExternalStorage,
+        recursive: true
+      }).catch(() => {});
+      
       const result = await Filesystem.writeFile({
         path: filePath,
         data: response.data,
@@ -258,7 +249,6 @@ const Index = () => {
 
       console.log('🔵 Abrindo FileOpener...');
       
-      // Open APK with native installer
       await FileOpener.open({
         filePath: result.uri,
         contentType: 'application/vnd.android.package-archive',
@@ -271,7 +261,6 @@ const Index = () => {
         description: `Siga as instruções para instalar ${app.name}`,
       });
 
-      // Limpar estado de download
       setDownloadingApps(prev => {
         const newSet = new Set(prev);
         newSet.delete(app.packageName);
@@ -283,13 +272,13 @@ const Index = () => {
         return newProgress;
       });
 
-      // Verificar múltiplas vezes se o app foi instalado
+      // Verificar instalação
       const checkIntervals = [3000, 6000, 10000, 15000, 20000, 30000];
       let installed = false;
       
       checkIntervals.forEach((interval) => {
         setTimeout(async () => {
-          if (installed) return; // Já detectou, não precisa continuar
+          if (installed) return;
           
           try {
             const { value } = await AppLauncher.canOpenUrl({ url: app.packageName });
