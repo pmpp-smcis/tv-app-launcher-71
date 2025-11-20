@@ -8,6 +8,7 @@ import { Capacitor, CapacitorHttp } from '@capacitor/core';
 import { FileOpener } from '@capacitor-community/file-opener';
 import { App as CapacitorApp } from '@capacitor/app';
 import { AppLauncher } from '@capacitor/app-launcher';
+import LargeFileDownloader from '@/plugins/LargeFileDownloader';
 
 // Configure your JSON URL here
 const APPS_JSON_URL = "https://raw.githubusercontent.com/pmpp-smcis/apoio/refs/heads/main/apps.json";
@@ -186,115 +187,128 @@ const Index = () => {
         description: `Iniciando download de ${app.name}`,
       });
 
-      // Simular progresso de forma mais realista
-      const progressInterval = setInterval(() => {
-        setDownloadProgress(prev => {
-          const current = prev[app.packageName] || 0;
-          if (current < 30) {
-            return { ...prev, [app.packageName]: current + 5 };
-          } else if (current < 60) {
-            return { ...prev, [app.packageName]: current + 3 };
-          } else if (current < 80) {
-            return { ...prev, [app.packageName]: current + 2 };
-          } else if (current < 95) {
-            return { ...prev, [app.packageName]: current + 1 };
-          }
-          return prev;
-        });
-      }, 1000);
 
       const fileName = `${app.packageName}.apk`;
-      const filePath = `Download/${fileName}`;
       
-      console.log('🔵 Iniciando download via CapacitorHttp...');
+      console.log('🔵 Iniciando download via DownloadManager nativo...');
       console.log('🔵 URL:', app.apkUrl);
+      console.log('🔵 Nome do arquivo:', fileName);
       
-      const response = await CapacitorHttp.get({
+      // Usar o DownloadManager nativo do Android para arquivos grandes
+      const download = await LargeFileDownloader.download({
         url: app.apkUrl,
-        responseType: 'blob',
-        connectTimeout: 600000,
-        readTimeout: 600000,
+        fileName: fileName,
+        title: `${app.name}`,
+        description: 'Baixando aplicativo...',
       });
       
-      clearInterval(progressInterval);
-      setDownloadProgress(prev => ({ ...prev, [app.packageName]: 100 }));
+      console.log('🔵 Download iniciado, ID:', download.id);
       
-      console.log('🔵 Download concluído, status:', response.status);
-      
-      if (response.status !== 200) {
-        throw new Error(`Erro HTTP ${response.status}`);
-      }
-      
-      console.log('🔵 Salvando arquivo...');
-      
-      await Filesystem.mkdir({
-        path: 'Download',
-        directory: Directory.ExternalStorage,
-        recursive: true
-      }).catch(() => {});
-      
-      const result = await Filesystem.writeFile({
-        path: filePath,
-        data: response.data,
-        directory: Directory.ExternalStorage,
-        recursive: true
+      // Listener para progresso real do download
+      const progressListener = await LargeFileDownloader.addListener('progress', (event) => {
+        console.log(`🔵 Progresso: ${event.progress}%`);
+        setDownloadProgress(prev => ({ ...prev, [app.packageName]: event.progress }));
       });
+      
+      // Listener para quando o download completar
+      const completedListener = await LargeFileDownloader.addListener('completed', async (event) => {
+        console.log('🔵 Download concluído!');
+        console.log('🔵 Caminho:', event.filePath);
+        
+        // Remover listeners
+        progressListener.remove();
+        completedListener.remove();
+        
+        setDownloadProgress(prev => ({ ...prev, [app.packageName]: 100 }));
 
-      console.log('🔵 Arquivo salvo em:', result.uri);
+        toast({
+          title: "Download concluído",
+          description: "Abrindo instalador...",
+        });
 
-      toast({
-        title: "Download concluído",
-        description: "Abrindo instalador...",
-      });
-
-      console.log('🔵 Abrindo FileOpener...');
-      
-      await FileOpener.open({
-        filePath: result.uri,
-        contentType: 'application/vnd.android.package-archive',
-      });
-      
-      console.log('🔵 FileOpener aberto com sucesso');
-      
-      toast({
-        title: "Instalador aberto",
-        description: `Siga as instruções para instalar ${app.name}`,
-      });
-
-      setDownloadingApps(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(app.packageName);
-        return newSet;
-      });
-      setDownloadProgress(prev => {
-        const newProgress = { ...prev };
-        delete newProgress[app.packageName];
-        return newProgress;
-      });
-
-      // Verificar instalação
-      const checkIntervals = [3000, 6000, 10000, 15000, 20000, 30000];
-      let installed = false;
-      
-      checkIntervals.forEach((interval) => {
-        setTimeout(async () => {
-          if (installed) return;
+        console.log('🔵 Abrindo FileOpener...');
+        
+        try {
+          // Abrir APK com instalador nativo
+          await FileOpener.open({
+            filePath: event.filePath,
+            contentType: 'application/vnd.android.package-archive',
+          });
           
-          try {
-            const { value } = await AppLauncher.canOpenUrl({ url: app.packageName });
-            if (value && !installed) {
-              installed = true;
-              setInstalledApps(prev => new Set(prev).add(app.packageName));
-              toast({
-                title: "Instalação detectada!",
-                description: `${app.name} foi instalado com sucesso`,
-              });
+          console.log('🔵 FileOpener aberto com sucesso');
+          
+          toast({
+            title: "Instalador aberto",
+            description: `Siga as instruções para instalar ${app.name}`,
+          });
+
+          // Verificar instalação periodicamente
+          const checkInterval = setInterval(async () => {
+            try {
+              const { value } = await AppLauncher.canOpenUrl({ url: app.packageName });
+              if (value) {
+                setInstalledApps(prev => new Set([...prev, app.packageName]));
+                clearInterval(checkInterval);
+                toast({
+                  title: "Instalado!",
+                  description: `${app.name} foi instalado com sucesso`,
+                });
+              }
+            } catch (e) {
+              console.log('Erro ao verificar instalação:', e);
             }
-          } catch (e) {
-            console.log('Verificando instalação:', e);
-          }
-        }, interval);
+          }, 2000);
+
+          setTimeout(() => clearInterval(checkInterval), 30000);
+          
+        } catch (openError) {
+          console.error('❌ Erro ao abrir FileOpener:', openError);
+          toast({
+            title: "Erro ao abrir instalador",
+            description: "Não foi possível abrir o instalador do APK",
+            variant: "destructive",
+          });
+        }
+
+        // Limpar estado de download
+        setDownloadingApps(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(app.packageName);
+          return newSet;
+        });
+        setDownloadProgress(prev => {
+          const newState = { ...prev };
+          delete newState[app.packageName];
+          return newState;
+        });
       });
+
+      // Listener para erros
+      const failedListener = await LargeFileDownloader.addListener('failed', (event) => {
+        console.error('❌ Download falhou:', event.error);
+        progressListener.remove();
+        completedListener.remove();
+        failedListener.remove();
+        
+        toast({
+          title: "Erro no download",
+          description: event.error,
+          variant: "destructive",
+        });
+
+        setDownloadingApps(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(app.packageName);
+          return newSet;
+        });
+        setDownloadProgress(prev => {
+          const newState = { ...prev };
+          delete newState[app.packageName];
+          return newState;
+        });
+      });
+
+      return;
     } catch (error) {
       console.error('❌ Erro na instalação:', error);
       console.error('❌ Stack:', error instanceof Error ? error.stack : 'N/A');
