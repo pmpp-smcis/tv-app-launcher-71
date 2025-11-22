@@ -245,7 +245,31 @@ class LargeFileDownloaderPlugin : Plugin() {
 }
 ```
 
-## Passo 3: Modificar AndroidManifest.xml
+## Passo 3: Registrar o Plugin no MainActivity
+
+**CRÍTICO:** O plugin precisa ser registrado no `MainActivity.kt` para funcionar!
+
+Abra o arquivo `android/app/src/main/java/app/lovable/cbf0723297e04c0a86d6beea42355f6c/MainActivity.kt` e adicione o registro do plugin:
+
+```kotlin
+package app.lovable.cbf0723297e04c0a86d6beea42355f6c
+
+import android.os.Bundle
+import com.getcapacitor.BridgeActivity
+
+class MainActivity : BridgeActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        
+        // Registrar o plugin LargeFileDownloader
+        registerPlugin(LargeFileDownloaderPlugin::class.java)
+    }
+}
+```
+
+**Se o MainActivity.kt já existir**, apenas adicione a linha `registerPlugin(LargeFileDownloaderPlugin::class.java)` dentro do método `onCreate`.
+
+## Passo 4: Modificar AndroidManifest.xml
 
 Abra `android/app/src/main/AndroidManifest.xml` e adicione `android:largeHeap="true"` na tag `<application>`:
 
@@ -263,7 +287,7 @@ Abra `android/app/src/main/AndroidManifest.xml` e adicione `android:largeHeap="t
 </application>
 ```
 
-## Passo 4: Adicionar Permissões
+## Passo 5: Adicionar Permissões
 
 Verifique se as seguintes permissões estão no `AndroidManifest.xml`:
 
@@ -273,12 +297,18 @@ Verifique se as seguintes permissões estão no `AndroidManifest.xml`:
 <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 ```
 
-## Passo 5: Sincronizar e Testar
+## Passo 6: Sincronizar e Testar
 
 ```bash
 npx cap sync
 npx cap run android
 ```
+
+**Se o erro "plugin is not implemented on android" persistir:**
+1. Verifique se criou o arquivo `LargeFileDownloaderPlugin.kt` (Passo 2)
+2. ✅ **Verifique se registrou o plugin no `MainActivity.kt` (Passo 3)** ← MAIS COMUM
+3. Execute `npx cap sync` novamente
+4. Limpe o cache: no Android Studio, vá em Build > Clean Project > Rebuild Project
 
 ## Resultado
 
