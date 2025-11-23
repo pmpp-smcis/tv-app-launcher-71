@@ -11,7 +11,8 @@ import { AppLauncher } from '@capacitor/app-launcher';
 import LargeFileDownloader from '@/plugins/LargeFileDownloader';
 
 // Configure your JSON URL here
-const APPS_JSON_URL = "https://raw.githubusercontent.com/pmpp-smcis/apoio/refs/heads/main/apps.json";
+// Usando jsDelivr CDN para evitar rate limit do GitHub
+const APPS_JSON_URL = "https://cdn.jsdelivr.net/gh/pmpp-smcis/apoio@main/apps.json";
 const LOCAL_FALLBACK_JSON = "/apps-example.json";
 const CACHE_KEY = "apps_cache";
 const CACHE_TIMESTAMP_KEY = "apps_cache_timestamp";
