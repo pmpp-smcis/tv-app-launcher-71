@@ -13,6 +13,9 @@ import LargeFileDownloader from '@/plugins/LargeFileDownloader';
 // Configure your JSON URL here
 const APPS_JSON_URL = "https://raw.githubusercontent.com/pmpp-smcis/apoio/refs/heads/main/apps.json";
 const LOCAL_FALLBACK_JSON = "/apps-example.json";
+const CACHE_KEY = "apps_cache";
+const CACHE_TIMESTAMP_KEY = "apps_cache_timestamp";
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
 
 const Index = () => {
   const [apps, setApps] = useState<AppItem[]>([]);
@@ -99,6 +102,23 @@ const Index = () => {
       setLoading(true);
       setError(null);
       
+      // Verificar cache primeiro
+      const cachedData = localStorage.getItem(CACHE_KEY);
+      const cachedTimestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+      const now = Date.now();
+      
+      if (cachedData && cachedTimestamp) {
+        const cacheAge = now - parseInt(cachedTimestamp);
+        if (cacheAge < CACHE_DURATION) {
+          console.log('🔵 Usando cache (válido por mais', Math.round((CACHE_DURATION - cacheAge) / 1000), 'segundos)');
+          const data: AppsData = JSON.parse(cachedData);
+          setApps(data.apps || []);
+          setHeaderImage(data.headerImage || null);
+          setLoading(false);
+          return;
+        }
+      }
+      
       console.log('🔵 Buscando apps de:', APPS_JSON_URL);
       
       // Use CapacitorHttp for native platform, fetch for web
@@ -115,6 +135,11 @@ const Index = () => {
         if (response.status === 200) {
           const data: AppsData = response.data;
           console.log('🔵 Apps carregados:', data.apps?.length || 0);
+          
+          // Salvar no cache
+          localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+          localStorage.setItem(CACHE_TIMESTAMP_KEY, now.toString());
+          
           setApps(data.apps || []);
           setHeaderImage(data.headerImage || null);
           return;
@@ -130,11 +155,30 @@ const Index = () => {
         }
         
         const data: AppsData = await response.json();
+        
+        // Salvar no cache
+        localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+        localStorage.setItem(CACHE_TIMESTAMP_KEY, now.toString());
+        
         setApps(data.apps || []);
         setHeaderImage(data.headerImage || null);
       }
     } catch (err) {
       console.error('❌ Erro ao buscar apps:', err);
+      
+      // Tentar usar cache expirado antes do fallback
+      const cachedData = localStorage.getItem(CACHE_KEY);
+      if (cachedData) {
+        console.log('🟡 Usando cache expirado devido a erro de rede');
+        const data: AppsData = JSON.parse(cachedData);
+        setApps(data.apps || []);
+        setHeaderImage(data.headerImage || null);
+        toast({
+          title: "Usando cache",
+          description: "Não foi possível atualizar, exibindo última versão salva",
+        });
+        return;
+      }
       
       // Try local fallback
       try {
