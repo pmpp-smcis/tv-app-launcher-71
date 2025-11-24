@@ -6,7 +6,8 @@ import { Loader2 } from "lucide-react";
 import { Capacitor, CapacitorHttp } from '@capacitor/core';
 import { App as CapacitorApp } from '@capacitor/app';
 import { AppLauncher } from '@capacitor/app-launcher';
-import { Browser } from '@capacitor/browser';
+import { Http } from '@capacitor-community/http';
+import { Directory } from '@capacitor/filesystem';
 
 // Configure your JSON URL here
 // Usando jsDelivr CDN para evitar rate limit do GitHub
@@ -25,6 +26,8 @@ const Index = () => {
   const bannerRef = useRef<HTMLDivElement>(null);
   const [installedApps, setInstalledApps] = useState<Set<string>>(new Set());
   const [headerImage, setHeaderImage] = useState<string | null>(null);
+  const [downloadingApps, setDownloadingApps] = useState<Set<string>>(new Set());
+  const [downloadProgress, setDownloadProgress] = useState<Map<string, number>>(new Map());
   const { toast } = useToast();
 
   useEffect(() => {
@@ -209,26 +212,63 @@ const Index = () => {
   };
 
   const handleInstall = useCallback(async (app: AppItem) => {
+    if (!Capacitor.isNativePlatform()) {
+      toast({
+        title: "Download disponível apenas no Android",
+        description: "Execute o app no Android para fazer downloads",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
-      console.log('🔵 Abrindo download de:', app.name);
+      setDownloadingApps(prev => new Set([...prev, app.packageName]));
+      setDownloadProgress(prev => new Map(prev).set(app.packageName, 0));
+
+      console.log('🔵 Iniciando download de:', app.name);
       console.log('🔵 URL do APK:', app.apkUrl);
       
       toast({
-        title: "Abrindo download...",
-        description: `Download de ${app.name} será gerenciado pelo navegador interno`,
+        title: "Baixando...",
+        description: `Download de ${app.name} iniciado`,
       });
 
-      // Usar Browser do Capacitor para abrir o APK
-      // O Android automaticamente gerencia o download e instalação
-      await Browser.open({
+      // Download usando @capacitor-community/http
+      const fileName = `${app.name.replace(/\s+/g, '_')}_${Date.now()}.apk`;
+      const response = await Http.downloadFile({
         url: app.apkUrl,
-        presentationStyle: 'popover', // Abre dentro do app
-        toolbarColor: '#000000',
+        filePath: fileName,
+        progress: true,
+        method: 'GET',
       });
 
-      console.log('🔵 Browser aberto com sucesso');
-      
-      // Verificar instalação periodicamente após alguns segundos
+      console.log('🔵 Download concluído:', response.path);
+
+      setDownloadingApps(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(app.packageName);
+        return newSet;
+      });
+
+      setDownloadProgress(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(app.packageName);
+        return newMap;
+      });
+
+      toast({
+        title: "Download concluído!",
+        description: `${app.name} baixado. Instalando...`,
+      });
+
+      // Abrir o arquivo APK para instalação
+      const { FileOpener } = await import('@capacitor-community/file-opener');
+      await FileOpener.open({
+        filePath: response.path!,
+        contentType: 'application/vnd.android.package-archive',
+      });
+
+      // Verificar instalação após alguns segundos
       setTimeout(() => {
         const checkInterval = setInterval(async () => {
           try {
@@ -246,15 +286,27 @@ const Index = () => {
           }
         }, 3000);
 
-        // Parar de verificar após 60 segundos
         setTimeout(() => clearInterval(checkInterval), 60000);
       }, 5000);
 
     } catch (error) {
-      console.error('❌ Erro ao abrir browser:', error);
+      console.error('❌ Erro ao baixar:', error);
+      
+      setDownloadingApps(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(app.packageName);
+        return newSet;
+      });
+
+      setDownloadProgress(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(app.packageName);
+        return newMap;
+      });
+
       toast({
-        title: "Erro",
-        description: error instanceof Error ? error.message : "Falha ao abrir download",
+        title: "Erro no download",
+        description: error instanceof Error ? error.message : "Falha ao baixar o app",
         variant: "destructive",
       });
     }
@@ -421,6 +473,8 @@ const Index = () => {
               setFocusedIndex(index);
             }}
             isInstalled={installedApps.has(app.packageName)}
+            isDownloading={downloadingApps.has(app.packageName)}
+            downloadProgress={downloadProgress.get(app.packageName)}
           />
         ))}
       </div>
